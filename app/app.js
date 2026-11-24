@@ -1,4 +1,4 @@
-const VER='v23'; // 与 sw.js 的版本号一致
+const VER='v24'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 身份与板子 ---------- */
 // c：阵营 god 神职 / villager 平民（含混血儿） / wolf 狼人
@@ -108,8 +108,13 @@ const left=k=>cntOf(k)-used(k);
 const snap=()=>{undo.push(JSON.stringify(S));if(undo.length>200)undo.shift();undoDirty='push';};
 // 每次改动后：补平民、清掉失效录入、判胜负，再存盘和刷新界面
 function settle(){autoVillagers();sync();enforce();const w=checkWin();save();render();if(w)showWin();}
-function commit(text,fn){snap();fn();if(text)L(text);settle();}
-function upd(fn){snap();fn();settle();}
+// 操作中途出错就整步还原，避免留下改了一半的状态
+function commit(text,fn){
+ snap();
+ try{fn();if(text)L(text);}catch(e){S=norm(JSON.parse(undo.pop()));undoDirty='';save();render();toast('操作失败，已还原');throw e;}
+ settle();
+}
+function upd(fn){commit('',fn);}
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',1400);}
 // 弹层新打开时回到顶部；已打开时（如多选重绘）保持位置
 function sheet(h,keep){const e=$('#sheet');e.innerHTML=h;$('#bg').classList.add('show');if(!keep)e.scrollTop=0;}
@@ -259,7 +264,7 @@ const STEPS={
  witch:()=>{
   const n=S.n,w=one('witch'),b=blocked('witch'),self=w&&n.knife===w.n;
   const antiOk=(S.day>1||w)&&!S.used.anti&&!b&&n.knife>0&&!n.poison&&!self,poiOk=!S.used.poison&&!b&&!n.anti;
-  return {t:'女巫',say:(n.knife>0?`“女巫请睁眼。昨晚【${n.knife}】号玩家被袭击，你有一瓶解药，是否使用？（使用请比大拇指，不使用请摇手）”`:'“女巫请睁眼。昨晚无人被袭击。”')+'<br>“你有一瓶毒药，是否使用？（使用请比毒杀号码，不使用请摇手）”<br>“女巫请闭眼。”',
+  return {t:'女巫',say:(n.knife>0?`“女巫请睁眼。昨晚<em class="k">【${n.knife}】号</em>玩家被袭击，你有一瓶解药，是否使用？（使用请比大拇指，不使用请摇手）”`:'“女巫请睁眼。昨晚无人被袭击。”')+'<br>“你有一瓶毒药，是否使用？（使用请比毒杀号码，不使用请摇手）”<br>“女巫请闭眼。”',
    body:idRow('witch')+blkNote('witch')+
     `<div class="row"><span>解药</span><b>${S.used.anti?'已用':n.anti?'救 '+n.knife+'号':'可用'}</b><button class="btn ${n.anti?'act':''}" ${antiOk||n.anti?'':'disabled'} onclick="upd(()=>S.n.anti=!S.n.anti)">${n.anti?'取消使用':'使用解药'}</button></div>`+
     (self?note('女巫全程不可自救。'):'')+row('毒药',S.used.poison?'已用':n.poison?'毒 '+lab(n.poison):'不使用','选择',"pickT('poison')",!poiOk)+note('同一夜女巫不能同时使用解药和毒药。'),ok:has('witch')};},
@@ -314,7 +319,7 @@ function wizard(){
  const st=stepsOf(),total=st.length;if(S.n.step>=total)S.n.step=total-1;
  const key=st[S.n.step],x=STEPS[key](),ok=x.ok===undefined||x.ok;
  const dots=st.map((k,i)=>`<i class="${i<S.n.step?'d':i===S.n.step?'c':''}"></i>`).join('');
- return `<div class="wiz"><div class="wh"><span class="lbl">NIGHT ${String(S.day).padStart(2,'0')} · ${S.n.step+1}/${total} · ${x.t}</span><div class="dots">${dots}</div></div>
+ return `<div class="wiz ${S.hide&&key!=='close'&&key!=='sheriff'?'mask':''}"><div class="wh"><span class="lbl">NIGHT ${String(S.day).padStart(2,'0')} · ${S.n.step+1}/${total} · ${x.t}</span><div class="dots">${dots}</div></div>
   ${say(x.say)}${x.body}
   <div class="wf"><button class="btn" ${S.n.step?'':'disabled'} onclick="upd(()=>S.n.step--)">← 上一步</button>
   ${key==='dawn'?`<button class="btn pri" style="flex:2" onclick="adv(confirmDawn)">确认 · 天亮 ☀</button>`:`<button class="btn pri" style="flex:2" ${ok?'':'disabled'} onclick="adv(()=>upd(()=>S.n.step++))">下一步 →</button>`}</div></div>`;
@@ -325,10 +330,11 @@ function seatPicker(title,o){window._pk={cur:new Set(o.sel||[]),o};drawPk(title)
 function drawPk(title){
  const {cur,o}=window._pk;window._pkTitle=title||window._pkTitle;
  sheet(`<h2>${window._pkTitle}</h2><div class="pk ${S.hide?'hide':''}">${S.seats.map(s=>{const r=s.role&&R[s.role];
-  return `<button class="${cur.has(s.n)?'cur':''} ${s.dead?'dd':''}" ${(o.ok?o.ok(s):true)?'':'disabled'} onclick="pkTap(${s.n})">${r&&!S.hide?`<img src="img/${r.k}.png">`:''}<b>${s.n}</b><small>${S.names[s.n-1]||(r&&!S.hide?r.n:'')}</small></button>`;}).join('')}</div>
+  return `<button class="${cur.has(s.n)?'cur':''} ${s.dead?'dd':''}" ${!o.ok||o.ok(s)||(S.hide&&!s.dead)?'':'disabled'} onclick="pkTap(${s.n})">${r&&!S.hide?`<img src="img/${r.k}.png">`:''}<b>${s.n}</b><small>${S.names[s.n-1]||(r&&!S.hide?r.n:'')}</small></button>`;}).join('')}</div>
   <div class="pkf">${o.none?`<button class="btn" onclick="pkNone()">${o.none.label}</button>`:''}${o.multi?`<button class="btn pri" ${o.min&&cur.size<o.min?'disabled':''} onclick="pkOk()">确定（${cur.size}${o.max?'/'+o.max:''}）</button>`:''}</div>`,!title);
 }
 function pkTap(n){const {cur,o}=window._pk;
+ if(o.ok&&!o.ok(seat(n)))return toast('该玩家不能选'); // 隐藏模式下不置灰，免得露出身份
  if(o.multi){if(cur.has(n))cur.delete(n);else{if(o.max&&cur.size>=o.max)return toast(`最多 ${o.max} 个`);cur.add(n);}drawPk();}
  else{advAt=Date.now();close_();o.done(n);}}
 function pkOk(){const {cur,o}=window._pk;advAt=Date.now();close_();o.done([...cur].sort((a,b)=>a-b));}
@@ -398,7 +404,7 @@ function confirmDawn(){
   if(n.lcheck)L(`幸运儿查验：${n.lcheck}号 → ${seerWolf(seat(n.lcheck))?'狼人':'好人'}`);if(n.lpoison)L(`幸运儿：毒 ${n.lpoison}号`);
   r.N.forEach(x=>L(x.replace(/。$/,'')));
   r.D.filter(d=>gunTonight(seat(d))).forEach(d=>{const g=seat(d).ng=noShoot(d);if(g)L(`${gunName(seat(d))}${g}，不可开枪`);}); // ng：不可开枪的原因
-  if(n.learn>0&&!S.mech&&seat(n.learn).role==='hunter'&&r.D.includes(one('mechwolf').n)){one('mechwolf').ng='当夜刚学习';L('机械狼当夜刚学习，不可开枪');}
+  if(n.learn>0&&!S.mech&&seat(n.learn).role==='hunter'&&one('mechwolf')&&r.D.includes(one('mechwolf').n)){one('mechwolf').ng='当夜刚学习';L('机械狼当夜刚学习，不可开枪');}
   if(n.trade&&n.trade.skill==='gun'&&!isWolf(seat(n.trade.n))&&r.D.includes(n.trade.n)){seat(n.trade.n).ng='当夜刚获得猎枪';L('幸运儿当夜刚获得猎枪，不可开枪');}
   // 记录跨夜状态（须在标记死亡之前）
   if(awakeTonight())S.awakeDay=S.day;
@@ -417,7 +423,7 @@ function confirmDawn(){
 }
 function nextNight(){
  if(!S.d)return toast('请先完成今天的投票放逐');
- commit('',()=>{S.lastExile=S.d.n||0;S.v=null;S.day++;S.night=true;S.n=freshNight();S.d=null;L('—— 天黑 ——');});
+ commit('',()=>{S.lastExile=S.d.n||0;S.v=null;tmReset();S.day++;S.night=true;S.n=freshNight();S.d=null;L('—— 天黑 ——');});
 }
 
 /* ---------- 白天流程：每天放逐 1 人 ---------- */
@@ -450,7 +456,7 @@ function dayPanel(){
  const ex=S.seats.find(x=>x.badge&&x.dead);
  if(ex)body+=note('🎖 警长已出局，请移交或撕毁警徽。')+row('警徽',lab(ex.n),'处理','passBadge()');
  return `<div class="wiz"><div class="wh"><span class="lbl">DAY ${String(S.day).padStart(2,'0')} · 投票放逐</span></div>
-  <div class="phase" style="border:0;padding:0;background:none"><div class="big day">${label()}</div></div>${body}
+  <div class="phase" style="border:0;padding:0;background:none"><div class="big day">${label()}</div></div>${body}${timerHTML()}
   <div class="wf"><button class="btn pri" ${d?'':'disabled'} onclick="adv(nextNight)">天黑了 →</button></div></div>`;
 }
 // 狼美人白天出局：带走被魅惑者（决斗除外）
@@ -639,12 +645,13 @@ function enforce(){
 }
 function render(){
  let h=`<header><h1>狼人杀<em>·</em>法官记录<small>// ${BD().name} · ${BD().desc}</small></h1>
-  <button class="ib ${S.hide?'on':''}" onclick="togHide()" title="隐藏身份">${S.hide?'🙈':'👁'}</button>
+  ${S.hide?'<button class="ib" data-peek title="按住查看">按住看</button>':''}<button class="ib ${S.hide?'on':''}" onclick="togHide()" title="隐藏身份">${S.hide?'🙈':'👁'}</button>
   <button class="ib" onclick="openMenu()">⋯</button></header>`;
  h+=`<main class="lay"><section class="side">${updBar()}${winBar()}${S.night?wizard():dayPanel()}</section><section class="seatsec"><div class="lbl">SEATS · 点座位标记状态</div><div class="grid ${S.hide?'hide':''}">${S.seats.map(seatHTML).join('')}</div></section></main>`;
  const al=S.seats.filter(s=>!s.dead),c=k=>S.hide?'?':al.filter(s=>s.role&&R[s.role].c===k).length;
  h+=`<div class="stats"><div class="in"><div class="st w"><b>${c('wolf')}</b>狼人</div><div class="st g"><b>${c('god')}</b>神职</div><div class="st v"><b>${c('villager')}</b>平民</div><div class="st"><b>${al.length}</b>存活</div><button class="btn" onclick="openLog()">记录</button></div></div>`;
  $('#app').innerHTML=h;
+ document.documentElement.classList.toggle('dim',dimOn&&S.night);
 }
 function seatHTML(s){
  const r=s.role&&R[s.role],tags=[],n=S.n,nt=(c,t)=>tags.push(`<span class="tag nt ${c}">${t}</span>`);
@@ -695,6 +702,13 @@ function doRevive(i){close_();if(S.d&&S.d.n===i+1)return revokeExile();commit(`$
  revive(s);});}
 function togHide(){S.hide=!S.hide;save();render();toast(S.hide?'身份已隐藏':'身份已显示');}
 
+// 隐藏模式：按住才显示，松手、切走立即遮住
+function peek(on){document.documentElement.classList.toggle('peek',!!on&&S.hide);}
+document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('[data-peek]')){e.preventDefault();peek(true);}});
+['pointerup','pointercancel','blur','pagehide'].forEach(k=>addEventListener(k,()=>peek(false)));
+document.addEventListener('visibilitychange',()=>peek(false));
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('[data-peek]'))e.preventDefault();});
+
 /* ---------- 玩家名字 ---------- */
 // 名字会直接拼进界面，只保留安全字符
 const cleanName=v=>[...v.replace(/[<>&"'`\\]/g,'').trim()].slice(0,8).join('');
@@ -735,7 +749,7 @@ function delHist(id){saveHist(loadHist().filter(g=>g.id!==id));openHistory();toa
 // 记录顶部：12 位玩家的身份与状态（隐藏模式下不显示身份）
 function rosterHTML(g=S,hide=S.hide){return `<div class="ros">${g.seats.map(s=>{const r=s.role&&R[s.role];
  return `<div class="${s.dead?'out ':''}${r&&!hide?r.c:''}"><b>${s.n}</b>${r&&!hide?`<img src="img/${r.k}.png">`:''}<span>${hide?'???':r?r.n:'未录入'}${s.badge?' 🎖':''}${g.names[s.n-1]?`<em>${g.names[s.n-1]}</em>`:''}${s.dead?`<small class="${s.dead}">${s.at}${CAUSE[s.dead]}</small>`:''}</span></div>`;}).join('')}</div>`;}
-function openLog(){sheet(`<h2 class="lh"><span>📜 对局记录</span><button class="btn pri" onclick="copyLog()">📋 复制</button></h2>${winBar()}${rosterHTML()}${logHTML()}`);}
+function openLog(){sheet(`<h2 class="lh"><span>📜 对局记录</span><button class="btn pri" onclick="copyLog()">📋 复制</button></h2>${winBar()}${S.hide?'<button class="btn pk1" data-peek>👁 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
 function logHTML(g=S){return `<ul class="log">${g.log.length?g.log.map(l=>`<li><i>${l.t}</i><span>${l.x}</span></li>`).join(''):'<li>暂无记录</li>'}</ul>`;}
 function openMenu(){
  sheet(`<h2>菜单</h2><div class="opts">
@@ -745,6 +759,7 @@ function openMenu(){
   <button class="btn" onclick="copyLog()">📋 复制复盘文本</button>
   <button class="btn" onclick="openHistory()">🗂 历史对局<small>${loadHist().length} 局</small></button>
   <button class="btn" ${navigator.wakeLock?'':'disabled'} onclick="togWake()">🔆 屏幕常亮<small>${!navigator.wakeLock?'此浏览器不支持':!wakeOn?'已关闭':wake?'已开启':'未生效，请关省电模式'}</small></button>
+  <button class="btn" onclick="togDim()" style="grid-column:span 2">🌙 夜间调暗、口令大字<small>${dimOn?'已开启':'已关闭'}</small></button>
   <button class="btn danger" onclick="newGame()" style="grid-column:span 2">🔄 新开一局 / 换板子</button></div>${note('版本 '+VER)}`);
 }
 function doUndo(){if(!undo.length)return;const {hide,names,id}=S;S=norm(JSON.parse(undo.pop()));undoDirty='pop';S.hide=hide;S.names=names;
@@ -752,7 +767,7 @@ function doUndo(){if(!undo.length)return;const {hide,names,id}=S;S=norm(JSON.par
  save();close_();render();toast('已撤销');}
 function newGame(){sheet(`<h2>🔄 选择板子</h2>${pristine()?'':note(S.log.length?'当前对局会存入历史对局。':'当前录入将清空。')}<div class="bds">${Object.entries(BOARDS).map(([k,b])=>`<button class="btn bd ${S.board===k?'act':''}" onclick="startGame('${k}')">${b.name}<small>${b.desc}</small></button>`).join('')}</div>`);}
 // 误点可从菜单“撤销上一步”找回
-function startGame(k){const {hide,names}=S;close_();archive();snap();S=Object.assign(fresh(k),{hide,names});save();render();toast('已开新局：'+BD().name);}
+function startGame(k){const {hide,names}=S;close_();archive();tmReset();snap();S=Object.assign(fresh(k),{hide,names});save();render();toast('已开新局：'+BD().name);}
 function copyLog(id){
  const g=id?hist(id):S;if(!g)return;
  const t=[`【狼人杀法官记录】${bdName(g)}${id?' '+when(g):''}`,...(g.win?['结果：'+winText(g.win)]:[]),...g.seats.map(s=>`${s.n}号${g.names[s.n-1]?' '+g.names[s.n-1]:''} ${s.role?R[s.role].n:'-'}${s.badge?' 🎖':''}${s.dead?`（${s.at}${CAUSE[s.dead]}）`:''}`),'','过程：',...g.log.map(l=>`[${l.t}] ${l.x}`)].join('\n');
@@ -767,6 +782,45 @@ function copyFallback(t){
  let r=false;try{r=document.execCommand('copy');}catch(e){}
  a.remove();return r;
 }
+/* ---------- 发言计时 ---------- */
+// end 是到点的时间戳（0=未在走），切到后台或刷新后仍然准
+const TDS=[60,90,120,180,300];
+let tm={dur:120,left:120e3,end:0},tmInt=0,audio=null;
+const tmLeft=()=>tm.end?Math.max(0,tm.end-Date.now()):tm.left;
+const tmText=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+function tmSave(){try{localStorage.setItem('lrs-timer',JSON.stringify(tm));}catch(e){}}
+function timerHTML(){
+ const l=tmLeft(),run=!!tm.end&&l>0;
+ return `<div class="tm ${l<=0?'over':l<=1e4?'low':''}" id="tm"><span>发言计时</span><b id="tmv">${l<=0?'时间到':tmText(l)}</b><button class="btn" onclick="tmDur()">${tm.dur}秒</button><button class="btn" onclick="tmReset();tmDraw()">重置</button><button class="btn ${run?'':'act'}" onclick="tmGo()">${run?'暂停':l<=0?'下一位':'开始'}</button></div>`;
+}
+function tmDraw(){const e=$('#tm');if(e)e.outerHTML=timerHTML();}
+function tmTickOn(){clearInterval(tmInt);tmInt=setInterval(tmTick,200);}
+function tmTick(){
+ const l=tmLeft();
+ if(!tm.end){clearInterval(tmInt);return;}
+ if(l<=0){tm.end=0;tm.left=0;clearInterval(tmInt);tmSave();tmDraw();if(!S.night)tmAlarm();return;}
+ const v=$('#tmv');if(v){v.textContent=tmText(l);$('#tm').classList.toggle('low',l<=1e4);}
+}
+function tmGo(){
+ try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();}catch(e){} // 手机须在点击时启用声音
+ const l=tmLeft();
+ if(tm.end&&l>0){tm.left=l;tm.end=0;}else{tm.end=Date.now()+(l>0?l:tm.dur*1e3);tmTickOn();}
+ tmSave();tmDraw();
+}
+function tmReset(){tm.end=0;tm.left=tm.dur*1e3;clearInterval(tmInt);tmSave();}
+function tmDur(){tm.dur=TDS[(TDS.indexOf(tm.dur)+1)%TDS.length];tmReset();tmDraw();}
+// 震动 + 三声提示；iPhone 不支持震动，只有声音
+function tmAlarm(){
+ try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300]);}catch(e){}
+ try{[0,.35,.7].forEach(t=>{const o=audio.createOscillator(),g=audio.createGain(),a=audio.currentTime+t;o.frequency.value=880;g.gain.setValueAtTime(.25,a);g.gain.exponentialRampToValueAtTime(.001,a+.28);o.connect(g);g.connect(audio.destination);o.start(a);o.stop(a+.3);});}catch(e){}
+}
+try{const t=JSON.parse(localStorage.getItem('lrs-timer'));if(t&&TDS.includes(t.dur)&&t.left>=0&&t.end>=0){tm={dur:t.dur,left:Math.min(t.left,t.dur*1e3),end:t.end};if(tm.end){if(tm.end<=Date.now()){tm.end=0;tm.left=0;}else if(tm.end-Date.now()>tm.dur*1e3)tmReset();else tmTickOn();}}}catch(e){}
+
+/* ---------- 夜间调暗大字 ---------- */
+let dimOn=true;
+try{dimOn=localStorage.getItem('lrs-dim')!=='0';}catch(e){}
+function togDim(){dimOn=!dimOn;try{localStorage.setItem('lrs-dim',dimOn?'1':'0');}catch(e){}render();openMenu();}
+
 /* ---------- 屏幕常亮 ---------- */
 // 需要 https 或 localhost；切到后台会被系统释放，回到前台或点屏幕时重新申请
 let wake=null,wakeOn=true;

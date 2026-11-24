@@ -1,19 +1,52 @@
-# 推送到 main 后，把 app/ 发布到 GitHub Pages
+# 推送到 main 后先跑测试，全部通过才把 app/ 发布到 GitHub Pages
 name: Deploy Pages
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/pages.yml']
+    paths: ['app/**', 'tests/**', '.github/workflows/pages.yml']
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+      - run: node tests/run.mjs
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        round: [1, 2]
+        boards: ['hybrid,std,wkguard,demon', 'beauty,magician,bros,wkdream', 'gargoyle,mech,nightmare,blood']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+      - run: node tests/play.mjs --round ${{ matrix.round }} --boards ${{ matrix.boards }} --seed ${{ github.run_number }}${{ matrix.round }}
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: play-${{ matrix.round }}-${{ strategy.job-index }}
+          path: tests/out
   deploy:
+    needs: [test, play]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
