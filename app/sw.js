@@ -1,4 +1,4 @@
-const V='werewolf-judge-v21';
+const V='werewolf-judge-v22';
 const FILES=['./','./index.html','./manifest.webmanifest','./app.js','./icon-192.png','./icon-512.png',
  ...'seer medium witch hunter idiot guard knight magician merchant dreamer grave witchhunter hybrid villager wolf wolfking demon beauty elder younger gargoyle mechwolf nightmare bloodmoon'.split(' ').map(k=>`./img/${k}.png`)];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:'reload'})))).then(()=>self.skipWaiting()));});
