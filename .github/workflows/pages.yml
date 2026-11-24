@@ -17,12 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.d.outputs.page_url }}
+      url: ${{ steps.d.outputs.page_url || steps.d2.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: app
+      # 产物上传后要稍等才查得到，失败再试一次
+      - run: sleep 15
       - id: d
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - if: steps.d.outcome == 'failure'
+        run: sleep 45
+      - id: d2
+        if: steps.d.outcome == 'failure'
+        uses: actions/deploy-pages@v5
