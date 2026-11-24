@@ -1,3 +1,5 @@
+const VER='v23'; // 与 sw.js 的版本号一致
+let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 身份与板子 ---------- */
 // c：阵营 god 神职 / villager 平民（含混血儿） / wolf 狼人
 const ROLES=[
@@ -12,7 +14,7 @@ const R=Object.fromEntries(ROLES.map(r=>[r.k,r]));
 const B4={seer:1,witch:1,hunter:1,villager:4,wolf:3};
 const BOARDS={
  hybrid:{name:'预女猎白混',desc:'预女猎白混 + 3民 + 4狼',cnt:{seer:1,witch:1,hunter:1,idiot:1,hybrid:1,villager:3,wolf:4},pack:['wolf'],
-  n1:'close hybrid wolf witch seer hunter idiot dawn',n2:'close wolf witch seer hunter dawn'},
+  n1:'close hybrid wolf witch seer hunter idiot sheriff dawn',n2:'close wolf witch seer hunter dawn'},
  std:{name:'标准版 预女猎白',desc:'预女猎白 + 4民 + 4狼',cnt:{...B4,idiot:1,wolf:4},pack:['wolf'],
   n1:'close wolf witch seer hunter idiot sheriff dawn',n2:'close wolf witch seer hunter dawn'},
  wkguard:{name:'狼王守卫',desc:'预女猎守 + 4民 + 3狼 + 狼王',cnt:{...B4,guard:1,wolfking:1},pack:['wolf','wolfking'],mark:'wolfking',
@@ -43,24 +45,52 @@ const SKILL={check:'查验',poison:'毒药',gun:'猎枪'};
 const KEY='lrs-werewolf-v2';
 const freshNight=()=>({step:0,guard:null,dream:null,fear:null,swap:null,knife:null,anti:false,poison:null,check:null,gcheck:null,dcheck:null,
  charm:null,hunt:null,bknife:null,trade:null,lcheck:null,lpoison:null,learn:null,mcheck:null,mpoison:null,mguard:null,mknife:null});
-const fresh=(board='hybrid')=>({board,names:Array(12).fill(''),police:[],day:1,night:true,hide:false,model:null,used:{anti:false,poison:false},
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+// police 上警；out 退水；elLater 竞选延到第 2 天；v 记票草稿 {kind,round,c:PK 候选,m:{投票人:被投}}
+const fresh=(board='hybrid')=>({id:newId(),board,out:[],elLater:false,v:null,names:Array(12).fill(''),police:[],day:1,night:true,hide:false,model:null,used:{anti:false,poison:false},
  lastGuard:0,lastDream:0,lastCharm:0,charmed:0,lastExile:0,swapped:[],traded:null,lucky:null,mech:null,mechUsed:{poison:false,guard:false},awakeDay:null,sealed:0,knightUsed:false,badgeDone:false,badgeLost:false,
  n:freshNight(),d:null,win:null,seats:Array.from({length:12},(_,i)=>({n:i+1,role:null,dead:null,at:'',badge:false,flip:false})),log:[]});
-function load(){
- try{
-  const s=JSON.parse(localStorage.getItem(KEY));if(!s||!s.seats)return fresh();
+// 补齐旧存档、旧撤销记录缺少的字段
+function norm(s){
   const o=Object.assign(fresh(),s);o.n=Object.assign(freshNight(),s.n);
   if(!BOARDS[o.board])o.board='hybrid'; // 旧存档默认原板子
   o.seats.forEach(x=>{if(x.flip&&!x.dead)x.dead='exile';}); // 旧存档：已翻牌的白痴补记为出局
   return o;
- }catch(e){return fresh();}
 }
-let S=load(), undo=[];
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));return s&&s.seats?norm(s):fresh();}catch(e){return fresh();}}
+// 撤销记录：内存留 200 步，存盘留最近 50 步（环形 50 格，每步只写一格），刷新后仍可撤销
+const UK='lrs-undo',UN=50;
+let uTop=0,uCnt=0,undoDirty='';
+const uMeta=()=>localStorage.setItem(UK,JSON.stringify({t:uTop,c:uCnt}));
+function loadUndo(){
+ try{
+  const m=JSON.parse(localStorage.getItem(UK))||{},a=[];uTop=m.t>0?m.t:0;uCnt=m.c>0?Math.min(m.c,UN):0;
+  for(let k=uCnt-1;k>=0;k--){const x=localStorage.getItem('lrs-u'+(uTop-k)%UN);if(x&&JSON.parse(x).seats)a.push(x);else{a.length=0;}}
+  uCnt=a.length;return a;
+ }catch(e){uCnt=0;return [];}
+}
+function clearUndo(){try{for(let k=0;k<UN;k++)localStorage.removeItem('lrs-u'+k);uCnt=0;uMeta();}catch(e){}}
+function saveUndo(){
+ const d=undoDirty;undoDirty='';
+ try{
+  if(d==='push'){uTop++;uCnt=Math.min(UN,uCnt+1);localStorage.setItem('lrs-u'+uTop%UN,undo[undo.length-1]);}
+  else{uTop--;uCnt=Math.max(0,uCnt-1);}
+  uMeta();
+ }catch(e){clearUndo();}
+}
+let S=load(), undo=loadUndo();
 const BD=()=>BOARDS[S.board];
 const cntOf=k=>BD().cnt[k]||0;
 const $=s=>document.querySelector(s);
 let saveOk=true;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));saveOk=true;}catch(e){if(saveOk)toast('无法存档：刷新后记录会丢失');saveOk=false;}}
+function save(){
+ const put=()=>localStorage.setItem(KEY,JSON.stringify(S));
+ try{
+  try{put();}catch(e){clearUndo();put();} // 空间不足时先让出撤销记录
+  saveOk=true;
+ }catch(e){if(saveOk)toast('无法存档：刷新后记录会丢失');saveOk=false;return;}
+ if(undoDirty)saveUndo();
+}
 const label=()=>`第${S.day}${S.night?'夜':'天'}`;
 const L=x=>S.log.push({t:label(),x});
 const seatsOf=k=>S.seats.filter(s=>s.role===k);
@@ -75,7 +105,7 @@ const sn=n=>`${lab(n)}${seat(n).role?'·'+R[seat(n).role].n:''}`;
 const snv=n=>S.hide?lab(n):sn(n); // 界面显示用：隐藏模式下不带身份
 const used=k=>seatsOf(k).length;
 const left=k=>cntOf(k)-used(k);
-const snap=()=>{undo.push(JSON.stringify(S));if(undo.length>200)undo.shift();};
+const snap=()=>{undo.push(JSON.stringify(S));if(undo.length>200)undo.shift();undoDirty='push';};
 // 每次改动后：补平民、清掉失效录入、判胜负，再存盘和刷新界面
 function settle(){autoVillagers();sync();enforce();const w=checkWin();save();render();if(w)showWin();}
 function commit(text,fn){snap();fn();if(text)L(text);settle();}
@@ -106,7 +136,7 @@ function checkWin(){
  if(o&&!j)L('更正：胜负结果取消');
  return false;
 }
-const winText=()=>S.win.side==='wolf'?`狼人屠边获胜（${S.win.why}）`:`好人阵营获胜（${S.win.why}）`;
+const winText=(w=S.win)=>w.side==='wolf'?`狼人屠边获胜（${w.why}）`:`好人阵营获胜（${w.why}）`;
 function showWin(){
  const w=S.win.side==='wolf';
  const gun=gunners().filter(s=>s.dead&&!s.shot&&!noGun(s)); // 刚出局、还没决定是否开枪的玩家
@@ -272,7 +302,7 @@ const STEPS={
    if(ok2&&lu.skill==='poison')x+=tgt('毒药','lpoison',{none:'不使用'});
    if(ok2&&lu.skill==='gun')x+=note('猎枪在白天使用：天亮后在白天面板点“开枪”。');}
   return {t:'幸运儿',say:S.day===1?'“被拍到的玩家是幸运儿。”<br>（绕场一圈，交易成功则轻拍幸运儿）':'“幸运儿请睁眼，是否使用技能？”<br>“幸运儿请闭眼。”',body:x||note('没有幸运儿：空喊流程。')};},
- sheriff:()=>({t:'警长',say:'“要竞选警长的玩家请举手。”<br>（记录上警号码）<br>“请放下。”',body:row('上警',S.police.length?S.police.join('、')+'号':'<i>未录入</i>','选择','pickPolice()')+note('可不录入。当选后点座位授予警徽。')}),
+ sheriff:()=>({t:'警长',say:'“要竞选警长的玩家请举手。”<br>（记录上警号码）<br>“请放下。”',body:row('上警',S.police.length?S.police.join('、')+'号':'<i>未录入</i>','选择','pickPolice()')+note('可不录入，天亮后在白天面板继续：退水、投票、当选。')}),
  dawn:()=>{
   const r=resolve(),nd=nightDead(r),unk=S.seats.filter(s=>!s.role).length,guns=r.D.filter(d=>gunTonight(seat(d)));
   return {t:'天亮结算',say:'“天亮了，请睁眼。”<br>（若有警长竞选，先进行上警环节，再公布死讯）',
@@ -331,7 +361,8 @@ function pickWolves(){
   done:l=>upd(()=>S.seats.forEach(s=>{if(l.includes(s.n)){if(!mine(s))s.role='wolf';}else if(mine(s))s.role=null;}))});
 }
 function pickSwap(){seatPicker('交换哪两位？',{multi:true,max:2,min:2,sel:S.n.swap||[],ok:s=>alive(s)&&!S.swapped.includes(s.n),none:{label:'不交换',value:[]},done:l=>upd(()=>S.n.swap=l)});}
-function pickPolice(){seatPicker('哪些玩家上警？',{multi:true,sel:S.police,done:l=>upd(()=>S.police=l)});}
+function pickPolice(){seatPicker('哪些玩家上警？',{multi:true,sel:S.police,done:l=>upd(()=>{S.police=l;S.out=S.out.filter(x=>l.includes(x));if(S.v&&S.v.kind==='sheriff')S.v=null;})});}
+function pickOut(){seatPicker('哪些玩家退水？',{multi:true,sel:S.out,ok:s=>S.police.includes(s.n),done:l=>upd(()=>{S.out=l;if(S.v&&S.v.kind==='sheriff')S.v=null;})});}
 function pickTrade(){
  seatPicker('与谁交易？',{ok:s=>alive(s)&&notMe(s,'merchant'),none:{label:'不交易',value:0},done:n=>{
   if(!n)return upd(()=>S.n.trade=null);
@@ -386,7 +417,7 @@ function confirmDawn(){
 }
 function nextNight(){
  if(!S.d)return toast('请先完成今天的投票放逐');
- commit('',()=>{S.lastExile=S.d.n||0;S.day++;S.night=true;S.n=freshNight();S.d=null;L('—— 天黑 ——');});
+ commit('',()=>{S.lastExile=S.d.n||0;S.v=null;S.day++;S.night=true;S.n=freshNight();S.d=null;L('—— 天黑 ——');});
 }
 
 /* ---------- 白天流程：每天放逐 1 人 ---------- */
@@ -394,8 +425,9 @@ function nextNight(){
 function dayPanel(){
  const d=S.d,s=d&&d.n?seat(d.n):null,kn=one('knight'),bm=one('bloodmoon');
  let body='';
+ if(!d&&electing())body+=electPanel();
  if(!d){
-  body=say('“请投票。”<br>（统计票数，选出今天被放逐的玩家）')+row('放逐','<i>未选</i>','选择','pickExile()');
+  body+=say('“请投票。”<br>（统计票数，选出今天被放逐的玩家）')+row('放逐','<i>未选</i>','选择','pickExile()')+row('投票明细',voteState('exile'),'记票',"openVote('exile')");
   if(kn&&!kn.dead&&!S.knightUsed)body+=row('骑士决斗','未使用','决斗','pickDuel()');
   if(bm&&!bm.dead)body+=row('血月使徒','存活','自爆',`askBoom(${bm.n})`);
   if(S.hide||S.seats.some(x=>!x.dead&&canBoom(x)))body+=row('狼人自爆','未发生','自爆','pickBoom()');
@@ -415,7 +447,8 @@ function dayPanel(){
   body+=row('开枪',`${lab(x.n)}：${!h?'<i>未选</i>':h.t?'带走 '+lab(h.t):'不开枪'}`,h&&h.t?'更正':'开枪',h&&h.t?`revokeShot(${x.n})`:`pickShot(${x.n})`);
  });
  if(S.badgeLost)body+=note('🎖 警徽已流失，本局没有警长。');
- if(S.seats.some(x=>x.badge&&x.dead))body+=note('🎖 警长已出局，请移交或撕毁警徽（点座位操作）。');
+ const ex=S.seats.find(x=>x.badge&&x.dead);
+ if(ex)body+=note('🎖 警长已出局，请移交或撕毁警徽。')+row('警徽',lab(ex.n),'处理','passBadge()');
  return `<div class="wiz"><div class="wh"><span class="lbl">DAY ${String(S.day).padStart(2,'0')} · 投票放逐</span></div>
   <div class="phase" style="border:0;padding:0;background:none"><div class="big day">${label()}</div></div>${body}
   <div class="wf"><button class="btn pri" ${d?'':'disabled'} onclick="adv(nextNight)">天黑了 →</button></div></div>`;
@@ -431,12 +464,13 @@ function doExile(n){
  close_();
  if(S.night)return toast('夜间不能放逐');
  if(S.d)return toast('今天已完成放逐，需先更正');
+ commit('',()=>exile_(n));
+}
+function exile_(n){
  const s=n?seat(n):null,flip=!!(s&&s.role==='idiot'&&!s.flip);
- commit('',()=>{
-  L(!s?'今天无人放逐':`投票放逐：${sn(n)}${flip?' → 翻牌，视为出局':''}`);
-  S.d={n,flip};
-  if(s){s.dead='exile';s.at=label();s.flip=s.flip||flip;S.d.also=follow(n);} // 白痴翻牌同样视为出局，狼人无需追刀
- });
+ L(!s?'今天无人放逐':`投票放逐：${sn(n)}${flip?' → 翻牌，视为出局':''}`);
+ S.d={n,flip};S.v=null;
+ if(s){s.dead='exile';s.at=label();s.flip=s.flip||flip;S.d.also=follow(n);} // 白痴翻牌同样视为出局，狼人无需追刀
 }
 function revokeExile(){
  const d=S.d;if(!d)return;
@@ -447,27 +481,102 @@ function revokeExile(){
 }
 function pickDuel(){const k=one('knight');seatPicker('骑士与谁决斗？',{ok:s=>alive(s)&&s.n!==k.n,done:n=>commit('',()=>{
  S.knightUsed=true;const t=seat(n);
- if(isWolf(t)){t.dead='duel';t.at=label();S.d={n:0,skip:'duel',duel:n};L(`骑士决斗：${sn(n)} 是狼人，出局，直接入夜`);}
+ if(isWolf(t)){t.dead='duel';t.at=label();S.d={n:0,skip:'duel',duel:n};S.v=null;L(`骑士决斗：${sn(n)} 是狼人，出局，直接入夜`);}
  else{k.dead='duel';k.at=label();L(`骑士决斗：${sn(n)} 是好人，骑士 ${lab(k.n)} 出局`);}
 })});}
 
+/* ---------- 警长竞选 ---------- */
+// 第 1 天竞选；竞选中自爆且延期时，第 2 天再选
+const electing=()=>!S.night&&!S.badgeDone&&!S.badgeLost&&(S.day===1||(S.day===2&&S.elLater));
+// 竞选在公布死讯之前，昨夜死亡的玩家仍可参加
+const present=s=>!s.dead||(s.dead==='night'&&s.at===`第${S.day}夜`);
+const runners=()=>S.seats.filter(s=>present(s)&&S.police.includes(s.n)&&!S.out.includes(s.n)).map(s=>s.n);
+const nums=a=>a.length?a.join('、')+'号':'<i>未录入</i>';
+function electPanel(){
+ return say('“警长竞选。”<br>（发言、退水、警下投票；选出警长后再公布死讯）')+row('上警',nums(S.police),'选择','pickPolice()')+row('退水',S.out.length?nums(S.out):'无','选择','pickOut()',!S.police.length)+
+  row('警长投票',voteState('sheriff'),'记票',"openVote('sheriff')",!runners().length)+row('警长','<i>未选</i>','选择','pickSheriff()');
+}
+function pickSheriff(){seatPicker('谁当选警长？',{ok:s=>S.police.length?runners().includes(s.n):present(s),none:{label:'警徽流失',value:0},done:n=>commit('',()=>sheriff_(n))});}
+function sheriff_(n){
+ L(`警长竞选：上警 ${S.police.length?S.police.join('、')+'号':'—'}${S.out.length?`，退水 ${S.out.join('、')}号`:''} → ${n?lab(n)+' 当选警长':'警徽流失'}`);
+ S.seats.forEach(s=>s.badge=s.n===n);S.v=null;S.elLater=false;
+ if(n)S.badgeDone=true;else S.badgeLost=true;
+}
+// 警长出局：移交或撕毁
+function passBadge(){
+ const o=S.seats.find(s=>s.badge);if(!o)return;
+ seatPicker(`${lab(o.n)} 的警徽交给谁？`,{ok:s=>alive(s)&&s.n!==o.n,none:{label:'撕毁警徽',value:0},done:n=>commit(n?`警徽移交：${lab(o.n)} → ${lab(n)}`:`${lab(o.n)} 撕毁警徽`,()=>{o.badge=false;if(n)seat(n).badge=true;else S.badgeLost=true;})});
+}
+
+/* ---------- 记票（可选） ---------- */
+const VN={exile:'放逐投票',sheriff:'警长投票'};
+const voteState=k=>S.v&&S.v.kind===k?`${S.v.round>1?'PK ':''}已记 ${tally().cast}/${voters().length} 票`:'<i>未记录</i>';
+const cands=()=>S.v.c?S.v.c.filter(n=>S.v.kind==='sheriff'?present(seat(n)):!seat(n).dead):S.v.kind==='sheriff'?runners():S.seats.filter(s=>!s.dead).map(s=>s.n);
+// 放逐：存活玩家投票，PK 台上的人不投；警长：警下投票
+function voters(){
+ if(S.v.kind==='sheriff')return S.seats.filter(s=>present(s)&&!S.police.includes(s.n)).map(s=>s.n);
+ const a=S.seats.filter(s=>!s.dead).map(s=>s.n),b=S.v.c?a.filter(n=>!S.v.c.includes(n)):a;
+ return b.length?b:a;
+}
+// 警长放逐投票算 1.5 票
+const weight=n=>S.v.kind==='exile'&&seat(n).badge?1.5:1;
+function tally(){
+ const c=cands(),vs=voters(),by={};let cast=0;
+ vs.forEach(n=>{const t=S.v.m[n];if(c.includes(t)){cast++;(by[t]=by[t]||[]).push(n);}});
+ const t=c.filter(n=>by[n]).map(n=>({n,who:by[n],k:by[n].reduce((a,x)=>a+weight(x),0)})).sort((a,b)=>b.k-a.k||a.n-b.n);
+ return {t,cast,top:t.filter(x=>x.k===t[0].k).map(x=>x.n),none:vs.filter(n=>!c.includes(S.v.m[n]))};
+}
+function openVote(kind){
+ if(kind==='exile'?S.d:!electing())return;
+ if(!S.v||S.v.kind!==kind)S.v={kind,round:1,c:null,m:{}};
+ window._vc=0;save();drawVote();
+}
+function voteResult(){
+ const r=tally(),ex=S.v.kind==='exile',fail=ex?'无人放逐':'警徽流失';
+ if(!r.t.length)return {n:0,t:'无人投票：'+fail};
+ if(r.top.length===1)return {n:r.top[0],t:(ex?'放逐 ':'当选 ')+lab(r.top[0])};
+ return S.v.round===1?{pk:r.top,t:`平票 PK：${r.top.join('、')}号`}:{n:0,t:'再次平票：'+fail};
+}
+function drawVote(keep){
+ const r=tally(),c=cands(),vs=voters(),of=n=>r.t.find(x=>x.n===n),res=voteResult();
+ if(!c.includes(window._vc))window._vc=0;
+ sheet(`<h2>🗳 ${VN[S.v.kind]}${S.v.round>1?' · PK':''}</h2>${note('先点被投的玩家，再点投给他的人；不点算弃票。'+(S.v.kind==='exile'&&S.seats.some(s=>s.badge&&!s.dead)?'警长 🎖 算 1.5 票。':''))}
+  <div class="lbl" style="margin-top:12px">被投的玩家</div><div class="pk vc">${c.map(n=>`<button class="${n===window._vc?'cur':''}" onclick="voteFor(${n})"><b>${n}</b><small>${S.names[n-1]||''}</small><small class="vk">${of(n)?of(n).k+' 票':'0'}</small></button>`).join('')}</div>
+  <div class="lbl" style="margin-top:12px">投票的玩家</div><div class="pk vv">${vs.map(n=>{const t=S.v.m[n],o=c.includes(t);return `<button class="${o&&t===window._vc?'cur':''}" onclick="voteBy(${n})"><b>${n}${seat(n).badge?'🎖':''}</b><small>${S.names[n-1]||''}</small><small class="vk">${o?'→ '+t+'号':'弃票'}</small></button>`;}).join('')}</div>
+  <div class="pkf"><button class="btn" onclick="voteClear()">清空</button><button class="btn pri" style="flex:2" onclick="adv(voteOk)">${res.t}</button></div>`,keep);
+}
+function voteFor(n){window._vc=n;drawVote(true);}
+function voteBy(n){
+ if(!window._vc)return toast('先点被投的玩家');
+ if(S.v.m[n]===window._vc)delete S.v.m[n];else S.v.m[n]=window._vc;
+ save();render();drawVote(true);
+}
+function voteClear(){S.v.m={};save();render();drawVote(true);}
+function voteOk(){
+ const v=S.v,r=tally(),res=voteResult(),
+  line=`${VN[v.kind]}${v.round>1?'（PK）':''}：${r.t.map(x=>`${x.n}号 ${x.k}票（${x.who.map(n=>n+(v.kind==='exile'&&seat(n).badge?'🎖':'')).join('、')}）`).join('｜')||'无人投票'}${r.none.length&&r.t.length?`｜弃票 ${r.none.join('、')}号`:''}`;
+ close_();
+ if(res.pk)return commit('',()=>{L(line);L(`平票 PK：${res.pk.join('、')}号`);S.v={kind:v.kind,round:2,c:res.pk,m:{}};}),openVote(v.kind);
+ commit('',()=>{L(line);v.kind==='exile'?exile_(res.n):sheriff_(res.n);});
+}
+
 /* ---------- 狼人自爆 ---------- */
-const canBoom=s=>isWolf(s)&&s.role!=='beauty'; // 狼美人不能自爆
+const canBoom=s=>isWolf(s)&&!['beauty','gargoyle','mechwolf'].includes(s.role); // 狼美人、石像鬼、机械狼不能自爆
 function pickBoom(){seatPicker('哪位狼人自爆？',{ok:s=>alive(s)&&(S.hide||canBoom(s)),done:n=>canBoom(seat(n))?askBoom(n):toast('该玩家不能自爆')});}
-// 还没有选出过警长时，问清是否在竞选中自爆
+// 警长还没选出的竞选日，问清是否在竞选中自爆
 function askBoom(n){
  if(S.d)return toast('今天已有结果，需先更正');
- if(S.day>2||S.badgeDone||S.badgeLost)return boom(n,'');
+ if(!electing())return boom(n,'');
  sheet(`<h2>💥 ${lab(n)} 自爆</h2>${note('自爆后直接入夜。是否发生在警长竞选阶段？')}<div class="opts" style="margin-top:12px">
   <button class="btn pri" style="grid-column:span 2" onclick="boom(${n},'')">不是竞选阶段</button>
-  <button class="btn" onclick="boom(${n},'lost')">竞选中自爆<small>警徽流失</small></button><button class="btn" onclick="boom(${n},'later')">竞选中自爆<small>竞选延到明天</small></button></div>`);
+  <button class="btn" onclick="boom(${n},'lost')">竞选中自爆<small>警徽流失</small></button><button class="btn" ${S.day>1?'disabled':''} onclick="boom(${n},'later')">竞选中自爆<small>${S.day>1?'已延过一次':'竞选延到明天'}</small></button></div>`);
 }
 function boom(n,badge){close_();const s=seat(n);commit('',()=>{
- s.dead='boom';s.at=label();S.d={n:0,skip:'boom',boom:n,lost:badge==='lost'};
+ s.dead='boom';s.at=label();S.d={n:0,skip:'boom',boom:n,lost:badge==='lost',later:badge==='later'};S.v=null;
  L(`狼人自爆：${sn(n)}，直接入夜`);
  if(s.role==='bloodmoon'){S.sealed=S.day+1;L('血月使徒自爆，今夜神职技能被封印');}
  if(badge==='lost'){S.badgeLost=true;L('警长竞选中自爆：警徽流失');}
- if(badge==='later')L('警长竞选中自爆：竞选延到明天');
+ if(badge==='later'){S.elLater=true;L('警长竞选中自爆：竞选延到明天');}
 });}
 
 /* ---------- 开枪 ---------- */
@@ -532,7 +641,7 @@ function render(){
  let h=`<header><h1>狼人杀<em>·</em>法官记录<small>// ${BD().name} · ${BD().desc}</small></h1>
   <button class="ib ${S.hide?'on':''}" onclick="togHide()" title="隐藏身份">${S.hide?'🙈':'👁'}</button>
   <button class="ib" onclick="openMenu()">⋯</button></header>`;
- h+=`<main class="lay"><section class="side">${winBar()}${S.night?wizard():dayPanel()}</section><section class="seatsec"><div class="lbl">SEATS · 点座位标记状态</div><div class="grid ${S.hide?'hide':''}">${S.seats.map(seatHTML).join('')}</div></section></main>`;
+ h+=`<main class="lay"><section class="side">${updBar()}${winBar()}${S.night?wizard():dayPanel()}</section><section class="seatsec"><div class="lbl">SEATS · 点座位标记状态</div><div class="grid ${S.hide?'hide':''}">${S.seats.map(seatHTML).join('')}</div></section></main>`;
  const al=S.seats.filter(s=>!s.dead),c=k=>S.hide?'?':al.filter(s=>s.role&&R[s.role].c===k).length;
  h+=`<div class="stats"><div class="in"><div class="st w"><b>${c('wolf')}</b>狼人</div><div class="st g"><b>${c('god')}</b>神职</div><div class="st v"><b>${c('villager')}</b>平民</div><div class="st"><b>${al.length}</b>存活</div><button class="btn" onclick="openLog()">记录</button></div></div>`;
  $('#app').innerHTML=h;
@@ -544,7 +653,7 @@ function seatHTML(s){
  if(s.role==='hybrid'&&S.model)tags.push(`<span class="tag mdl">榜样→${S.model}</span>`);
  if(s.role==='mechwolf'&&S.mech)tags.push(`<span class="tag mdl">学→${S.mech.n}</span>`);
  if(S.lucky&&S.lucky.n===s.n)tags.push(`<span class="tag mdl">幸运儿·${SKILL[S.lucky.skill]}</span>`);
- if(S.day===1&&S.police.includes(s.n))tags.push(`<span class="tag pol">上警</span>`);
+ if((S.day===1||electing())&&S.police.includes(s.n))tags.push(`<span class="tag pol">${S.out.includes(s.n)?'退水':'上警'}</span>`);
  if(!S.night&&S.charmed===s.n&&one('beauty')&&!one('beauty').dead&&!s.dead)tags.push('<span class="tag mdl">被魅惑</span>');
  if(S.night){
   if(n.swap&&n.swap.includes(s.n))nt('p','换');if(n.fear===s.n)nt('p','惧');if(n.dream===s.n)nt('g','梦');if(n.guard===s.n||n.mguard===s.n)nt('g','守');
@@ -580,7 +689,7 @@ function doBadge(i){close_();const had=S.seats[i].badge;commit(had?`${lab(i+1)} 
 function doDie(i,t){close_();commit('',()=>{const s=S.seats[i];s.dead=t;s.at=t==='night'?`第${S.day}夜`:label();L(`${sn(i+1)} ${CAUSE[t]}`);if(!S.night)follow(i+1);});}
 function doRevive(i){close_();if(S.d&&S.d.n===i+1)return revokeExile();commit(`${lab(i+1)} 恢复存活（更正）`,()=>{const s=S.seats[i],d=S.d;
  // 自爆、决斗的误操作：连同直接入夜和已用技能一起恢复
- if(!S.night&&d&&d.skip==='boom'&&s.dead==='boom'){S.d=null;S.sealed=0;if(d.lost)S.badgeLost=false;}
+ if(!S.night&&d&&d.skip==='boom'&&s.dead==='boom'){S.d=null;S.sealed=0;if(d.lost)S.badgeLost=false;if(d.later)S.elLater=false;}
  if(!S.night&&d&&d.skip==='duel'&&d.duel===s.n){S.d=null;S.knightUsed=false;}
  if(s.dead==='duel'&&s.role==='knight')S.knightUsed=false;
  revive(s);});}
@@ -597,26 +706,56 @@ function openNames(i){
 function nameKey(e,k){if(e.key!=='Enter'||e.isComposing||e.keyCode===229)return;const x=document.querySelectorAll('.nms input')[k+1];if(x)x.focus();else saveNames();}
 function saveNames(){const v=[...document.querySelectorAll('.nms input')].map(x=>cleanName(x.value));S.names=v;save();close_();render();toast('名字已保存');}
 
+/* ---------- 历史对局 ---------- */
+// 新开一局时自动存入，保留最近 20 局
+const HK='lrs-history',HMAX=20;
+function loadHist(){try{const a=JSON.parse(localStorage.getItem(HK));return Array.isArray(a)?a.filter(g=>g&&g.id&&g.seats&&g.log&&g.names):[];}catch(e){return [];}}
+function saveHist(a){for(let k=Math.min(a.length,HMAX);k>=0;k--)try{return localStorage.setItem(HK,JSON.stringify(a.slice(0,k)));}catch(e){}}
+const hist=id=>loadHist().find(g=>g.id===id);
+const bdName=g=>BOARDS[g.board]?BOARDS[g.board].name:g.board;
+const when=g=>{const d=new Date(g.end),p=x=>String(x).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+function archive(){
+ if(!S.log.length)return;
+ const {id,board,day,win,names,seats,log}=S;
+ saveHist([{id,end:Date.now(),board,day,win,names,seats,log},...loadHist().filter(g=>g.id!==id)]);
+}
+function openHistory(){
+ const a=loadHist();
+ sheet(`<h2>🗂 历史对局</h2>${a.length?`<div class="hs">${a.map(g=>`<button class="btn" onclick="openHist('${g.id}')"><b>${bdName(g)}</b><small>${when(g)} · ${g.day} 天</small><small class="${g.win?g.win.side:''}">${g.win?winText(g.win):'未分胜负'}</small></button>`).join('')}</div>`:note('还没有历史对局。新开一局时，上一局会自动存到这里。')}${note(`最多保留最近 ${HMAX} 局，只存在本机。`)}`);
+}
+function openHist(id){
+ const g=hist(id);if(!g)return openHistory();
+ sheet(`<h2 class="lh"><span>🗂 ${bdName(g)}</span><button class="btn pri" onclick="copyLog('${id}')">📋 复制</button></h2>${note(when(g))}${g.win?`<div class="winbar ${g.win.side}" style="margin-top:8px;cursor:default">🏆 ${winText(g.win)}</div>`:''}${rosterHTML(g,false)}${logHTML(g)}
+  <div class="pkf"><button class="btn" onclick="openHistory()">← 返回</button><button class="btn danger" onclick="askDelHist('${id}')">删除这一局</button></div>`);
+}
+function askDelHist(id){const g=hist(id);if(!g)return;sheet(`<h2>删除这一局？</h2>${note(`${bdName(g)} · ${when(g)}，删除后无法恢复。`)}<div class="pkf"><button class="btn" onclick="openHist('${id}')">取消</button><button class="btn danger" onclick="delHist('${id}')">确认删除</button></div>`);}
+function delHist(id){saveHist(loadHist().filter(g=>g.id!==id));openHistory();toast('已删除');}
+
 /* ---------- 菜单 ---------- */
 // 记录顶部：12 位玩家的身份与状态（隐藏模式下不显示身份）
-function rosterHTML(){return `<div class="ros">${S.seats.map(s=>{const r=s.role&&R[s.role];
- return `<div class="${s.dead?'out ':''}${r&&!S.hide?r.c:''}"><b>${s.n}</b>${r&&!S.hide?`<img src="img/${r.k}.png">`:''}<span>${S.hide?'???':r?r.n:'未录入'}${s.badge?' 🎖':''}${S.names[s.n-1]?`<em>${S.names[s.n-1]}</em>`:''}${s.dead?`<small class="${s.dead}">${s.at}${CAUSE[s.dead]}</small>`:''}</span></div>`;}).join('')}</div>`;}
-function openLog(){sheet(`<h2 class="lh"><span>📜 对局记录</span><button class="btn pri" onclick="copyLog()">📋 复制</button></h2>${winBar()}${rosterHTML()}<ul class="log">${S.log.length?S.log.map(l=>`<li><i>${l.t}</i><span>${l.x}</span></li>`).join(''):'<li>暂无记录</li>'}</ul>`);}
+function rosterHTML(g=S,hide=S.hide){return `<div class="ros">${g.seats.map(s=>{const r=s.role&&R[s.role];
+ return `<div class="${s.dead?'out ':''}${r&&!hide?r.c:''}"><b>${s.n}</b>${r&&!hide?`<img src="img/${r.k}.png">`:''}<span>${hide?'???':r?r.n:'未录入'}${s.badge?' 🎖':''}${g.names[s.n-1]?`<em>${g.names[s.n-1]}</em>`:''}${s.dead?`<small class="${s.dead}">${s.at}${CAUSE[s.dead]}</small>`:''}</span></div>`;}).join('')}</div>`;}
+function openLog(){sheet(`<h2 class="lh"><span>📜 对局记录</span><button class="btn pri" onclick="copyLog()">📋 复制</button></h2>${winBar()}${rosterHTML()}${logHTML()}`);}
+function logHTML(g=S){return `<ul class="log">${g.log.length?g.log.map(l=>`<li><i>${l.t}</i><span>${l.x}</span></li>`).join(''):'<li>暂无记录</li>'}</ul>`;}
 function openMenu(){
  sheet(`<h2>菜单</h2><div class="opts">
   <button class="btn" ${undo.length?'':'disabled'} onclick="doUndo()">↩️ 撤销上一步<small>含夜间录入</small></button>
   <button class="btn" onclick="openLog()">📜 对局记录</button>
   <button class="btn" onclick="openNames()">🏷 玩家名字<small>已录 ${S.names.filter(x=>x).length}/12</small></button>
   <button class="btn" onclick="copyLog()">📋 复制复盘文本</button>
-  <button class="btn" ${navigator.wakeLock?'':'disabled'} onclick="togWake()" style="grid-column:span 2">🔆 屏幕常亮<small>${!navigator.wakeLock?'此浏览器不支持':!wakeOn?'已关闭':wake?'已开启':'未生效：请关闭省电模式后重新打开菜单'}</small></button>
-  <button class="btn danger" onclick="newGame()" style="grid-column:span 2">🔄 新开一局 / 换板子</button></div>`);
+  <button class="btn" onclick="openHistory()">🗂 历史对局<small>${loadHist().length} 局</small></button>
+  <button class="btn" ${navigator.wakeLock?'':'disabled'} onclick="togWake()">🔆 屏幕常亮<small>${!navigator.wakeLock?'此浏览器不支持':!wakeOn?'已关闭':wake?'已开启':'未生效，请关省电模式'}</small></button>
+  <button class="btn danger" onclick="newGame()" style="grid-column:span 2">🔄 新开一局 / 换板子</button></div>${note('版本 '+VER)}`);
 }
-function doUndo(){if(!undo.length)return;const {hide,names}=S;S=JSON.parse(undo.pop());S.hide=hide;S.names=names;save();close_();render();toast('已撤销');}
-function newGame(){sheet(`<h2>🔄 选择板子</h2>${pristine()?'':note('当前对局记录将清空。')}<div class="bds">${Object.entries(BOARDS).map(([k,b])=>`<button class="btn bd ${S.board===k?'act':''}" onclick="startGame('${k}')">${b.name}<small>${b.desc}</small></button>`).join('')}</div>`);}
-// 误点可从菜单“撤销上一步”找回（刷新页面前有效）
-function startGame(k){const {hide,names}=S;close_();snap();S=Object.assign(fresh(k),{hide,names});save();render();toast('已开新局：'+BD().name);}
-function copyLog(){
- const t=[`【狼人杀法官记录】${BD().name}`,...(S.win?['结果：'+winText()]:[]),...S.seats.map(s=>`${lab(s.n)} ${s.role?R[s.role].n:'-'}${s.badge?' 🎖':''}${s.dead?`（${s.at}${CAUSE[s.dead]}）`:''}`),'','过程：',...S.log.map(l=>`[${l.t}] ${l.x}`)].join('\n');
+function doUndo(){if(!undo.length)return;const {hide,names,id}=S;S=norm(JSON.parse(undo.pop()));undoDirty='pop';S.hide=hide;S.names=names;
+ if(S.id!==id)saveHist(loadHist().filter(g=>g.id!==S.id)); // 撤销“新开一局”：这一局又在进行，从历史移出
+ save();close_();render();toast('已撤销');}
+function newGame(){sheet(`<h2>🔄 选择板子</h2>${pristine()?'':note(S.log.length?'当前对局会存入历史对局。':'当前录入将清空。')}<div class="bds">${Object.entries(BOARDS).map(([k,b])=>`<button class="btn bd ${S.board===k?'act':''}" onclick="startGame('${k}')">${b.name}<small>${b.desc}</small></button>`).join('')}</div>`);}
+// 误点可从菜单“撤销上一步”找回
+function startGame(k){const {hide,names}=S;close_();archive();snap();S=Object.assign(fresh(k),{hide,names});save();render();toast('已开新局：'+BD().name);}
+function copyLog(id){
+ const g=id?hist(id):S;if(!g)return;
+ const t=[`【狼人杀法官记录】${bdName(g)}${id?' '+when(g):''}`,...(g.win?['结果：'+winText(g.win)]:[]),...g.seats.map(s=>`${s.n}号${g.names[s.n-1]?' '+g.names[s.n-1]:''} ${s.role?R[s.role].n:'-'}${s.badge?' 🎖':''}${s.dead?`（${s.at}${CAUSE[s.dead]}）`:''}`),'','过程：',...g.log.map(l=>`[${l.t}] ${l.x}`)].join('\n');
  const done=r=>toast(r?'已复制到剪贴板':'复制失败');
  // 局域网 http 下没有 navigator.clipboard，退回 execCommand
  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(()=>done(true),()=>done(copyFallback(t)));
@@ -650,4 +789,19 @@ document.addEventListener('pointerup',holdWake);
 holdWake();
 
 settle(); // 打开旧存档时也整理一次并补判胜负
-if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+/* ---------- 新版提示 ---------- */
+// 新版下载完先等待，用户点了才启用并刷新；对局已存盘，刷新后接着录
+function updBar(){return newSW?`<div class="winbar upd" onclick="applyUpdate()">✨ 有新版，点此更新（对局保留）</div>`:'';}
+function applyUpdate(){if(!newSW)return;applying=true;save();newSW.postMessage('skip');setTimeout(()=>location.reload(),3000);}
+function watchSW(reg){
+ const ready=w=>{if(w&&navigator.serviceWorker.controller){newSW=w;render();}};
+ const follow_=w=>w&&w.addEventListener('statechange',()=>{if(w.state==='installed')ready(w);});
+ ready(reg.waiting);follow_(reg.installing);
+ reg.addEventListener('updatefound',()=>follow_(reg.installing));
+ let last=Date.now(); // 长时间开着时，回到前台顺便检查
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-last>6e5){last=Date.now();reg.update().catch(()=>{});}});
+}
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(applying){applying=false;location.reload();}});
+ addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(watchSW).catch(()=>{}));
+}
