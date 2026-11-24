@@ -110,7 +110,7 @@ const winText=()=>S.win.side==='wolf'?`狼人屠边获胜（${S.win.why}）`:`�
 function showWin(){
  const w=S.win.side==='wolf';
  // 今天或昨夜刚出局、可能开枪的玩家
- const gun=S.seats.some(s=>s.dead&&(s.role==='hunter'||s.role==='wolfking'||(s.role==='mechwolf'&&S.mech&&S.mech.role==='hunter'))&&(s.at===label()||(!S.night&&s.at===`第${S.day}夜`)));
+ const gun=S.seats.some(s=>s.dead&&s.dead!=='love'&&!s.ng&&isGun(s)&&(s.at===label()||(!S.night&&s.at===`第${S.day}夜`)));
  sheet(`<div class="wn ${S.win.side}"><div class="wi">${w?'🐺':'🛡'}</div><h3>${w?'狼人屠边获胜':'好人阵营获胜'}</h3><p>${S.win.why}</p></div>${gun?note('刚有可开枪的玩家出局：若开枪会改变结果，请先处理开枪。'):''}
   <div class="opts"><button class="btn pri" style="grid-column:span 2" onclick="openLog()">📜 查看记录</button><button class="btn" onclick="close_()">继续对局</button><button class="btn" onclick="newGame()">🔄 新开一局</button></div>`);
 }
@@ -164,6 +164,8 @@ function resolve(){
 }
 // 昨夜死亡名单：结算结果 + 法官当夜手动标记的夜间阵亡
 const nightDead=r=>[...r.D,...S.seats.filter(s=>s.dead==='night'&&s.at===label()).map(s=>s.n)].sort((a,b)=>a-b);
+// 持枪身份：猎人 / 狼王 / 学到猎人的机械狼
+const isGun=s=>s.role==='hunter'||s.role==='wolfking'||(s.role==='mechwolf'&&!!S.mech&&S.mech.role==='hunter');
 // 今夜能否开枪（猎人 / 狼王 / 学到猎人的机械狼）
 function noShoot(x){
  const c=resolve().C[x];
@@ -264,7 +266,7 @@ const STEPS={
   return {t:'幸运儿',say:S.day===1?'“被拍到的玩家是幸运儿。”<br>（绕场一圈，交易成功则轻拍幸运儿）':'“幸运儿请睁眼，是否使用技能？”<br>“幸运儿请闭眼。”',body:x||note('没有幸运儿：空喊流程。')};},
  sheriff:()=>({t:'警长',say:'“要竞选警长的玩家请举手。”<br>（记录上警号码）<br>“请放下。”',body:row('上警',S.police.length?S.police.join('、')+'号':'<i>未录入</i>','选择','pickPolice()')+note('可不录入。当选后点座位授予警徽。')}),
  dawn:()=>{
-  const r=resolve(),nd=nightDead(r),unk=S.seats.filter(s=>!s.role).length,guns=r.D.filter(d=>['hunter','wolfking'].includes(seat(d).role)||(seat(d).role==='mechwolf'&&S.mech&&S.mech.role==='hunter'));
+  const r=resolve(),nd=nightDead(r),unk=S.seats.filter(s=>!s.role).length,guns=r.D.filter(d=>isGun(seat(d)));
   return {t:'天亮结算',say:'“天亮了，请睁眼。”<br>（若有警长竞选，先进行上警环节，再公布死讯）',
    body:res(!nd.length,nd.length?'昨夜死亡：'+nd.map(snv).join('、'):'平安夜')+r.N.map(note).join('')+
     guns.map(d=>note(`${S.hide?lab(d):R[seat(d).role].n}${noShoot(d)?noShoot(d)+'，不可开枪。':'夜间死亡，可以开枪。'}`)).join('')+
@@ -356,7 +358,8 @@ function confirmDawn(){
   if(n.hunt)L(`猎魔人：狩猎 ${n.hunt}号`);
   if(n.lcheck)L(`幸运儿查验：${n.lcheck}号 → ${seerWolf(seat(n.lcheck))?'狼人':'好人'}`);if(n.lpoison)L(`幸运儿：毒 ${n.lpoison}号`);
   r.N.forEach(x=>L(x.replace(/。$/,'')));
-  r.D.filter(d=>['hunter','wolfking'].includes(seat(d).role)&&noShoot(d)).forEach(d=>L(`${R[seat(d).role].n}${noShoot(d)}，不可开枪`));
+  r.D.filter(d=>isGun(seat(d))).forEach(d=>{const g=seat(d).ng=noShoot(d);if(g)L(`${R[seat(d).role].n}${g}，不可开枪`);}); // ng：不可开枪的原因
+  if(n.learn>0&&!S.mech&&seat(n.learn).role==='hunter'&&r.D.includes(one('mechwolf').n)){one('mechwolf').ng='当夜刚学习';L('机械狼当夜刚学习，不可开枪');}
   // 记录跨夜状态（须在标记死亡之前）
   if(awakeTonight())S.awakeDay=S.day;
   S.lastGuard=n.guard>0?n.guard:0;S.lastDream=n.dream||0;S.lastCharm=n.charm||0;S.charmed=n.charm||0;
@@ -391,10 +394,12 @@ function dayPanel(){
   if(d.skip)body+=note('误操作可在菜单里“撤销上一步”，或点该座位“恢复存活”。');
   if(d.skip==='boom')body+=note('今夜所有神职技能被封印。');
   if(s&&d.flip)body+=note('白痴失去投票权，可继续发言；狼人无需追刀。');
-  if(s&&(s.role==='hunter'||s.role==='wolfking'||(s.role==='mechwolf'&&S.mech&&S.mech.role==='hunter')))body+=note(`${S.hide?lab(d.n):R[s.role].n}被放逐，可以开枪（点座位标记“被枪带走”）。`);
+  if(s&&isGun(s))body+=note(`${S.hide?lab(d.n):R[s.role].n}被放逐，可以开枪（点座位标记“被枪带走”）。`);
   if(s&&s.role==='bloodmoon'&&!S.seats.some(x=>isWolf(x)&&!x.dead))body+=note('血月使徒作为最后一狼被放逐：可暂活入夜并多刀一人，按局规处理。');
   (d.also||[]).forEach(x=>body+=note(`${lab(x)} 被魅惑，一同殉情，不能发动技能。`));
  }
+ // 昨夜死亡的持枪玩家能否开枪（手动标记的不知死因，只提示规则）
+ S.seats.filter(x=>x.dead==='night'&&x.at===`第${S.day}夜`&&isGun(x)).forEach(x=>{const w=S.hide?lab(x.n):`${lab(x.n)} ${R[x.role].n}`;body+=note(x.ng?`☠ ${w}${x.ng}，不可开枪。`:x.ng===''?`🔫 ${w} 昨夜死亡，可以开枪（点座位标记“被枪带走”）。`:`${w} 昨夜死亡：被毒杀则不可开枪。`);});
  if(S.seats.some(x=>x.badge&&x.dead))body+=note('🎖 警长已出局，请移交或撕毁警徽（点座位操作）。');
  return `<div class="wiz"><div class="wh"><span class="lbl">DAY ${String(S.day).padStart(2,'0')} · 投票放逐</span></div>
   <div class="phase" style="border:0;padding:0;background:none"><div class="big day">${label()}</div></div>${body}
@@ -511,7 +516,7 @@ function doRevive(i){close_();if(S.d&&S.d.n===i+1)return revokeExile();commit(`$
  if(!S.night&&d&&d.skip==='boom'&&s.dead==='boom'){S.d=null;S.sealed=0;}
  if(!S.night&&d&&d.skip==='duel'&&d.duel===s.n){S.d=null;S.knightUsed=false;}
  if(s.dead==='duel'&&s.role==='knight')S.knightUsed=false;
- s.dead=null;s.at='';s.flip=false;});}
+ s.dead=null;s.at='';s.flip=false;delete s.ng;});}
 function togHide(){S.hide=!S.hide;save();render();toast(S.hide?'身份已隐藏':'身份已显示');}
 
 /* ---------- 玩家名字 ---------- */
