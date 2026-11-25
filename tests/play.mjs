@@ -13,7 +13,7 @@ const B_=await browser(),{cdp,ev,errs}=B_;
 await cdp('Emulation.setDeviceMetricsOverride',{width:VW,height:VH,deviceScaleFactor:1,mobile:touch});
 if(touch)await cdp('Emulation.setTouchEmulationEnabled',{enabled:true});
 await cdp('Browser.grantPermissions',{origin:ORG,permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
-const nav=async()=>{for(let i=0;i<20;i++){try{if(await ev("typeof S==='object'&&typeof adv==='function'&&document.querySelectorAll('.seat').length===12"))break;}catch{}await sleep(250);}
+const nav=async()=>{for(let i=0;i<20;i++){try{if(await ev("typeof S==='object'&&typeof adv==='function'&&!!document.querySelector('#app header')"))break;}catch{}await sleep(250);}
  await ev(`window.Q={scope:()=>document.querySelector('#bg').classList.contains('show')?document.querySelector('#sheet'):document.querySelector('#app'),
  btn:t=>[...Q.scope().querySelectorAll('button')].find(b=>b.textContent.includes(t)&&!b.disabled),
  row:l=>{const rs=[...document.querySelectorAll('.side .row')];return rs.find(x=>x.querySelector('span').textContent===l)||rs.find(x=>x.querySelector('span').textContent.startsWith(l))},
@@ -22,7 +22,7 @@ const nav=async()=>{for(let i=0;i<20;i++){try{if(await ev("typeof S==='object'&&
  seat:n=>document.querySelectorAll('.seat')[n-1]}`);};
 let clicks=0,last=0;
 const tap=async expr=>{
- const c=await ev(`(()=>{const e=${expr};if(!e)return 'missing';if(e.disabled)return 'disabled';const r0=e.getBoundingClientRect(),bar=document.querySelector('.stats').getBoundingClientRect().top;if(r0.top<60||r0.bottom>bar||document.querySelector('#bg').classList.contains('show'))e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,h=document.elementFromPoint(x,y);const o=document.documentElement.scrollWidth-innerWidth;return [x,y,!!h&&(h===e||e.contains(h)),o,r.width,r.height]})()`);
+ const c=await ev(`(()=>{const e=${expr};if(!e)return 'missing';if(e.disabled)return 'disabled';const r0=e.getBoundingClientRect(),bar=(document.querySelector('.stats')||{getBoundingClientRect:()=>({top:innerHeight})}).getBoundingClientRect().top;if(r0.top<60||r0.bottom>bar||document.querySelector('#bg').classList.contains('show'))e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,h=document.elementFromPoint(x,y);const o=document.documentElement.scrollWidth-innerWidth;return [x,y,!!h&&(h===e||e.contains(h)),o,r.width,r.height]})()`);
  if(typeof c==='string')throw Error(c+': '+expr);if(!c[2])throw Error('covered: '+expr);if(c[3]>0)throw Error('overflow '+c[3]);
  if(c[5]<28)throw Error('small target '+c[5]+' '+expr);
  clicks++;
@@ -50,7 +50,7 @@ for(let i=0;i<12;i++){await cdp('Input.insertText',{text:NAMES[i]});if(i<11){awa
 await btn('保存');need((await st()).names.join()===NAMES.join(),'names '+(await st()).names.join());await sleep(1500);
 const G={reload:0,undo:0,hide:0,badge:0,shot:0,revoke:0,duel:0,boom:0};
 const steps=b=>d=>d===1?BOARDS[b].n1:BOARDS[b].n2;
-async function reload(){const a=await ev('JSON.stringify(S)');await cdp('Page.reload');await sleep(900);await nav();const b=await ev('JSON.stringify(S)');need(a===b,'reload changed state');G.reload++;}
+async function reload(){const a=await ev('JSON.stringify(S)');await cdp('Page.reload');await sleep(900);await nav();const b=await ev('JSON.stringify(S)');need(a===b,'reload changed state');G.reload++;if(await ev('home')){await tap("[...document.querySelectorAll('.home .bd')].find(b=>b.firstChild.textContent===BD().name)");await sleep(1450);}}
 async function undoNext(label){ // 下一步 → 撤销 → 再下一步
  const a=await ev('JSON.stringify(S)');await adv(label);if(rnd()<.5){await reload();G.undoReload=(G.undoReload||0)+1;}await btn('⋯');await btn('撤销上一步');const b=await ev('JSON.stringify(S)');need(a===b,'undo mismatch');G.undo++;await sleep(1450);}
 async function hideCheck(){await tap("document.querySelector('header .ib[onclick^=togHide]')");const t=await ev(`(()=>{const v=[...document.querySelectorAll('.seat')].some(s=>[...s.querySelectorAll('img,.rn span')].some(x=>{const c=getComputedStyle(x);return c.display!=='none'&&c.visibility!=='hidden'}));const b=new Set([...document.querySelectorAll('.seat:not(.dead)')].map(s=>getComputedStyle(s).borderTopColor)).size;return [v,b]})()`);need(!t[0]&&t[1]<=1,'hide leak '+t);await tap("document.querySelector('header .ib[onclick^=togHide]')");G.hide++;await sleep(1450);}
@@ -161,7 +161,7 @@ async function game(bd){
     if(n.knife===at('witch'))need((await side()).includes('女巫全程不可自救'),'self note');
     const r=rnd();if(a&&r<.45){await btn('使用解药');n.anti=1;need(!await en('毒药'),'both potions');}else if(po&&r<.75){await rb('毒药');n.poison=pick(A);await pk(n.poison);}}
    const sw=x=>isW(x)&&!(deck[x-1]==='younger'&&X.awake===null&&!n.aw);
-   if(key==='seer'){await ident('seer');if(can('seer')){await T2('查验','check',A.filter(x=>x!==at('seer')));need((await res1()).includes('🐺')===sw(mg(n.check)),'seer result '+deck[mg(n.check)-1]);}else need(!await en('查验'),'seer open');}
+   if(key==='seer'){await ident('seer');if(can('seer')){await T2('查验','check',A.filter(x=>x!==at('seer')));need((await res1()).includes('狼人')===sw(mg(n.check)),'seer result '+deck[mg(n.check)-1]);}else need(!await en('查验'),'seer open');}
    if(key==='mediumId')await ident('medium');
    const exact=x=>{const k=deck[x-1],l=X.learn||(n.learn?{role:deck[n.learn-1]}:null);return R[k==='mechwolf'&&l?l.role:k].n;};
    if(key==='medium'&&can('medium')){await T2('查验','check',A.filter(x=>x!==at('medium')));need((await res1()).endsWith('：'+exact(n.check)),'medium');}
@@ -172,7 +172,7 @@ async function game(bd){
    if(key==='demon'){await ident('demon');if(up('demon')){await T2('查验','dcheck',A.filter(x=>x!==at('demon')));need((await res1()).includes('不是神职')===(R[deck[n.dcheck-1]].c!=='god'),'demon');}}
    if(key==='gargoyleId')await ident('gargoyle');
    if(key==='gargoyle'&&up('gargoyle')){await T2('查验','gcheck',A.filter(x=>x!==at('gargoyle')));need((await res1()).endsWith('：'+R[deck[n.gcheck-1]].n),'gargoyle');if(d>1)need((await side()).includes(A.some(x=>deck[x-1]==='wolf')?'未带刀':'带刀'),'garg knife');}
-   if(key==='grave'){await ident('grave');if(d>1&&can('grave')){const t=await res1(),e=X.lastEx;need(!e?t.includes('无人'):t.includes('🐺')===isW(e),'grave '+t);}}
+   if(key==='grave'){await ident('grave');if(d>1&&can('grave')){const t=await res1(),e=X.lastEx;need(!e?t.includes('无人'):t.includes('狼人')===isW(e),'grave '+t);}}
    if(key==='witchhunter'){await ident('witchhunter');if(d>1){if(can('witchhunter'))await T2('狩猎','hunt',A.filter(x=>x!==at('witchhunter')),{none:1,p:.4});else need(!await en('狩猎'),'hunt open');}else need(!await ev("!!Q.rb('狩猎')"),'hunt n1');}
    if(key==='mech'){await ident('mechwolf');if(d===1)await T2('学习','learn',A.filter(x=>x!==at('mechwolf')),{none:1,p:.1});
     else if(up('mechwolf')){if(!X.learn){if(rnd()<.5)await T2('学习','learn',A.filter(x=>x!==at('mechwolf')));}
@@ -236,7 +236,7 @@ async function game(bd){
  // 终局记录
  await ev('close_()');await btn('记录');
  const ros=await ev("[...document.querySelectorAll('.ros>div')].map(e=>e.textContent.replace(/ 🎖/,'')).join('|')");
- const exp=deck.map((k,i)=>`${i+1}${R[k].n}${NAMES[i]}${how[i+1]?how[i+1][1]+CA[how[i+1][0]]:''}`).join('|');need(ros===exp,'roster '+ros+' exp '+exp);
+ const exp=deck.map((k,i)=>`${i+1}${R[k].n}${NAMES[i]}${how[i+1]?how[i+1][1]+CA[how[i+1][0]]:''}`).join('|');need(ros.replace(/ /g,'')===exp.replace(/ /g,''),'roster '+ros+' exp '+exp);
  const logOk=await ev("(()=>{const o=S.log.map(l=>{const m=l.t.match(/第(\\d+)(夜|天)/);return m[1]*2+(m[2]==='天'?1:0)});return o.every((x,i)=>!i||o[i-1]<=x)&&S.log[0].t==='第1夜'})()");need(logOk,'log order');
  await btn('复制');await sleep(250);const clip=await ev('navigator.clipboard.readText()');
  need(deck.every((k,i)=>clip.includes(`${i+1}号 ${NAMES[i]} ${R[k].n}`))&&clip.includes(BOARDS[bd].name)&&(!win||clip.includes('结果：'+(win==='wolf'?'狼人屠边获胜':'好人阵营获胜')))&&clip.includes('过程：'),'clipboard');

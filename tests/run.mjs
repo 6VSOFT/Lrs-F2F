@@ -21,6 +21,17 @@ await part('静态检查', async () => {
 
 const srv = await serve(), B = await browser(); const {ev, size, reload, cdp} = B;
 await size(375, 812); await B.go(srv.url, 3500);
+await part('首页选板子', async () => {
+  ok('首次打开是选板子', await ev("home&&document.querySelectorAll('.home .bd').length===12&&!document.querySelector('.seat')&&!document.querySelector('.stats')"));
+  ok('首页不调暗', !await ev("document.documentElement.classList.contains('dim')"));
+  for (const [w, h] of [[320, 568], [375, 812], [768, 1024], [1280, 800], [1920, 1080]]) { await size(w, h); await sleep(120); ok('首页宽度 ' + w, await ev("document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.home button')].every(b=>b.scrollWidth<=b.clientWidth+1&&b.offsetHeight>=44)")); }
+  await size(375, 812); const tapB = async n => { const [x, y] = await ev(rect(`[...document.querySelectorAll('.home .bd')].find(b=>b.firstChild.textContent==='${n}')`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(200); };
+  await ev("openNames();document.querySelectorAll('.nms input')[0].value='小明';saveNames()"); ok('首页录名字后仍在首页', await ev("home&&document.querySelector('.home').textContent.includes('已录 1/12')"));
+  await tapB('恶魔守卫'); ok('点板子进入第 1 夜', await ev("!home&&S.board==='demon'&&S.day===1&&S.night&&S.names[0]==='小明'&&document.querySelectorAll('.seat').length===12"));
+  await reload(); ok('没录东西再打开仍是首页', await ev('home')); await tapB('狼王守卫'); await ev('advAt=-1e4'); await ev("document.querySelector('.wf .pri').click()"); await reload(); ok('走过一步再打开留在对局', await ev("!home&&S.board==='wkguard'&&S.n.step===1")); await ev('newGame()'); await ev("startGame('std')"); await ev("setRole(0,'seer')"); await reload(); ok('有进行中的对局直接回对局', await ev("!home&&S.board==='std'&&S.seats[0].role==='seer'"));
+  await ev("openMenu();newGame();close_()"); ok('换板子取消不影响对局', await ev("!home&&S.seats[0].role==='seer'")); await ev("startGame('mech');doUndo()"); ok('撤销换板子回到对局', await ev("!home&&S.board==='std'&&S.seats[0].role==='seer'"));
+  await ev("S.names=Array(12).fill('');startGame('hybrid');close_()");
+});
 await part('安装与缓存', async () => {
   ok('SW 已启用', await ev("Promise.race([navigator.serviceWorker.ready.then(r=>r.active.state),new Promise(r=>setTimeout(()=>r('timeout'),5000))])") === 'activated');
   ok('缓存 30 个文件', (await ev("caches.keys().then(async k=>(await (await caches.open(k[0])).keys()).length)")) === 30);
@@ -57,9 +68,13 @@ await part('隐藏模式', async () => {
   const [lx, ly] = await ev(rect("document.querySelector('#sheet [data-peek]')")); await B.mouse('mousePressed', lx, ly); await sleep(80); ok('日志按住显示', await ev("[...document.querySelectorAll('#sheet .log span')].every(e=>getComputedStyle(e).color!=='rgba(0, 0, 0, 0)')")); await B.mouse('mouseReleased', lx, ly);
   await ev('close_();S.hide=false;render()'); ok('关闭隐藏后正常', all(await ev(seen)) !== '' && !await ev("!!document.querySelector('header [data-peek]')")); await ev("openLog()"); ok('普通日志不遮', await ev("getComputedStyle(document.querySelector('#sheet .log span')).color!=='rgba(0, 0, 0, 0)'")); await ev('close_()');
 });
+await part('防连点', async () => {
+  const r = await ev("(()=>{startGame('std');const o=Date.now;const k=ADV;ADV=350;const nx=()=>[...document.querySelectorAll('.wf .pri')][0].click();advAt=0;nx();const a=S.n.step;nx();const b=S.n.step;const t=o();Date.now=()=>t-60000;const s=performance.now();while(performance.now()-s<400);S.n.knife=0;'wolf,wolf,wolf,wolf,villager,villager,villager,villager,seer,witch,hunter,idiot'.split(',').forEach((x,i)=>S.seats[i].role=x);settle();nx();const c=S.n.step;Date.now=o;ADV=k;return [a,b,c]})()");
+  ok('连点只算一次、系统时间回拨不卡按钮', r.join() === '1,1,2', r);
+});
 await part('发言计时', async () => {
   await ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle()})()`); ok('夜里没有计时器', !await ev("!!document.querySelector('#tm0')"));
-  await ev('confirmDawn();close_()'); const v = () => ev("document.querySelector('#tm0 b').textContent"), tap = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm0 button')].find(b=>b.textContent.includes('${t}'))`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
+  await ev('confirmDawn();close_()'); const v = () => ev("document.querySelector('#tm0 b').textContent"), tap = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm0 button')].find(b=>b.textContent==='${t}')`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
   ok('默认 2 分钟', await v() === '2:00'); await tap('120秒'); ok('切换 180 秒', await v() === '3:00'); await tap('180秒'); await tap('300秒'); ok('循环到 60 秒', await v() === '1:00');
   await tap('开始'); await sleep(2100); const a = await v(); ok('在走', /^0:5[678]$/.test(a), a); await ev('render()'); ok('重绘不重置', /^0:5[5678]$/.test(await v()));
   await reload(); const b = await v(); await sleep(1300); ok('刷新后继续走', await v() < b, [b, await v()]);
@@ -69,19 +84,22 @@ await part('发言计时', async () => {
   await tap('下一位'); ok('下一位重新计时', /^(1:00|0:59)$/.test(await v())); await ev("doExile(0);nextNight()"); ok('天黑停止并重置', await ev("tms.every(t=>!t.end&&t.left===t.dur*1e3)&&tms[0].dur===60")); await ev('tms[0].dur=120;tmReset()');
   // 第二个计时器
   await ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle();confirmDawn();close_()})()`);
-  const v1 = () => ev("document.querySelector('#tm1 b').textContent"), tap1 = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm1 button')].find(b=>b.textContent.includes('${t}'))`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
+  const v1 = () => ev("document.querySelector('#tm1 b').textContent"), tap1 = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm1 button')].find(b=>b.textContent==='${t}')`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
   ok('两个计时 2:00 与 1:30', await v() === '2:00' && await v1() === '1:30' && await ev("document.querySelectorAll('.tm').length") === 2);
   await tap('开始'); await sleep(1300); const p0 = await v(); await tap1('开始'); await sleep(1300);
   ok('开始一个会暂停另一个', await v() === p0 && /^1:2[789]$/.test(await v1()) && await ev("document.querySelector('#tm0').textContent.includes('开始')&&document.querySelector('#tm1').textContent.includes('暂停')"), [p0, await v(), await v1()]);
   await reload(); const q1 = await v1(); await sleep(1300); ok('刷新后第二个继续、第一个不动', await v1() < q1 && await v() === p0, [q1, await v1(), p0, await v()]);
   await ev("window._vib=0;navigator.vibrate=x=>{window._vib=1;return true};tms[1].end=Date.now()+400;void 0"); await sleep(1000); ok('第二个到点只提示自己', await v1() === '时间到' && await v() === p0 && await ev("window._vib===1&&document.querySelector('#tm1').classList.contains('over')&&!document.querySelector('#tm0').classList.contains('over')"));
   await tap1('下一位'); ok('第二个下一位', /^1:(30|29)$/.test(await v1())); await tap1('重置'); ok('只重置自己', await v1() === '1:30' && await v() === p0); await tap1('90秒'); ok('各自换时长', await v1() === '2:00' && await v() === p0);
+  await ev("tms[1].dur=90;tmReset();tmDraw()"); await tap1('开始'); await sleep(2200); const z = await v1(); await tap1('重置后开始'); const z2 = await v1(); await sleep(1300);
+  ok('重置后开始：立刻从头走', z < '1:29' && /^1:(30|29)$/.test(z2) && /^1:2[89]$/.test(await v1()) && await ev("document.querySelector('#tm1').textContent.includes('暂停')"), [z, z2, await v1()]);
+  await tap1('暂停'); await tap1('重置后开始'); ok('暂停后也可重置后开始', /^1:(30|29)$/.test(await v1()) && await ev('!!tms[1].end')); await tap('重置后开始'); ok('重置后开始会暂停另一个', await ev('!tms[1].end&&!!tms[0].end'));
   await ev("tms[1].dur=90;tmReset();localStorage.setItem('lrs-timer',JSON.stringify({dur:180,left:100000,end:0}))"); await reload(); ok('v24 旧存档', await v() === '1:40' && await v1() === '1:30');
-  await ev("localStorage.setItem('lrs-timer','bad')"); await reload(); ok('坏存档不崩', await ev("tms[0].dur===120&&tms[1].dur===90&&document.querySelectorAll('.seat').length===12"));
+  await ev("localStorage.setItem('lrs-timer','bad')"); await reload(); ok('坏存档不崩', await ev("tms[0].dur===120&&tms[1].dur===90&&!!document.querySelector('#app header')"));
 });
 await part('夜间调暗大字', async () => {
   await ev("startGame('std')"); const dim = () => ev("document.documentElement.classList.contains('dim')");
-  ok('夜里默认调暗', await dim() && await ev("getComputedStyle(document.querySelector('.say')).fontSize") === '17px' && await ev("getComputedStyle(document.documentElement,'::after').pointerEvents") === 'none');
+  ok('夜里默认调暗', await dim() && await ev("getComputedStyle(document.querySelector('.say')).fontSize") === '18px' && await ev("getComputedStyle(document.documentElement,'::after').pointerEvents") === 'none');
   await ev(`'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle();confirmDawn();close_()`); ok('白天恢复', !await dim()); await ev('doExile(0);nextNight()'); ok('天黑再调暗', await dim());
   await ev('togDim()'); ok('可关闭', !await dim() && await ev("document.querySelector('#sheet').textContent.includes('口令大字已关闭')")); await reload(); ok('设置记住', !await dim()); await ev('togDim();close_()'); ok('可重新打开', await dim());
 });
@@ -92,8 +110,8 @@ await part('屏幕常亮', async () => {
   } else { console.log('  （本环境不允许常亮，跳过）'); }
 });
 await part('复制', async () => {
-  await ev("L('测试')"); await ev('openLog()'); const [x, y] = await ev(rect("[...document.querySelectorAll('#sheet button')].find(b=>b.textContent.includes('复制'))")); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(400);
-  ok('剪贴板', (await ev("navigator.clipboard.readText().catch(e=>'ERR')")).startsWith('【狼人杀法官记录】')); await ev('close_()');
+  await ev("L('身份：甲1号｜乙2号｜丙3号')"); await ev('openLog()'); ok('记录遇｜换行', await ev("(()=>{const e=[...document.querySelectorAll('#sheet .log span')].at(-1);return e.querySelectorAll('br').length===2&&!e.textContent.includes('｜')})()")); const [x, y] = await ev(rect("[...document.querySelectorAll('#sheet button')].find(b=>b.textContent.includes('复制'))")); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(400);
+  ok('剪贴板', (await ev("navigator.clipboard.readText().catch(e=>'ERR')")).startsWith('【狼人杀法官记录】')); const ct = (await ev('navigator.clipboard.readText()')).replace(/\r/g, ''); ok('复制遇｜换行', ct.includes('身份：甲1号\n　　　　乙2号\n　　　　丙3号') && !ct.includes('｜'), ct.slice(-80)); await ev('close_()');
 });
 await part('界面宽度', async () => {
   const views = {elect: "S.police=[1,3];S.night=false;S.day=1;S.badgeDone=S.badgeLost=false;S.d=null;render()", vote: "openVote('exile')", menu: 'openMenu()', hist: 'openHistory()', upd: 'close_();newSW={};render()', hide: "newSW=null;S.hide=true;S.night=true;S.n.step=2;render()", hidelog: 'openLog()', unhide: 'close_();S.hide=false;render()'};

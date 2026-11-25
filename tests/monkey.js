@@ -38,7 +38,7 @@ for(const bd of Object.keys(BOARDS)){for(let run=0;run<6;run++){
   const et=(e.textContent||'').trim().slice(0,30);
   for(const s of S.seats){if(s.shot&&s.shot.t&&seat(s.shot.t).dead!=='shot')note('shot target alive '+bd,et);if(s.dead==='shot'&&S.seats.filter(x=>x.shot&&x.shot.t===s.n).length!==1)note('shot without shooter '+bd,et);if(s.shot&&s.shot.t&&s.shot.d&&!s.dead)note('shooter alive '+bd,et);if(s.shot&&s.shot.t&&noGun(s))note('nogun shot '+bd,et);}
   if(S.lucky&&S.lucky.skill==='gun'&&(!!(seat(S.lucky.n).shot&&seat(S.lucky.n).shot.t))!==S.lucky.used)note('lucky used mismatch',et);
-  if(S.seats.some(x=>x.dead==='boom'&&['beauty','gargoyle','mechwolf'].includes(x.role))&&/自爆|竞选/.test(et))note('bad boom '+bd,et);
+  if(S.seats.some(x=>x.dead==='boom'&&['beauty','gargoyle','mechwolf'].includes(x.role))&&/自爆|竞选/.test(et)&&!/"dead":"boom"/.test(before))note('bad boom '+bd,et);
   if(S.d&&S.v)note('draft after result',et);if(S.night&&S.v)note('draft at night',et);if(S.badgeLost&&S.seats.some(x=>x.badge))note('lost but badge',et);
   if(undo.length&&uCnt&&localStorage.getItem('lrs-u'+uTop%UN)!==undo.at(-1))note('undo not saved',et);
   if(!S.night&&S.d&&S.d.skip==='boom'&&seat(S.d.boom).dead!=='boom')note('boom but alive',et);

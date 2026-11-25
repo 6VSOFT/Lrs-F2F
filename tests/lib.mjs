@@ -52,7 +52,7 @@ export async function browser(args = []) {
     // 打上记号再刷新，等到新页面就绪
     reload: async (ms = 600) => {
       await ev('window.__old=1'); await cdp('Page.reload');
-      for (let i = 0; i < 150; i++) { try { if (await ev("!window.__old&&typeof S==='object'&&typeof settle==='function'&&document.querySelectorAll('.seat').length===12")) break; } catch {} await sleep(100); }
+      for (let i = 0; i < 150; i++) { try { if (await ev("!window.__old&&typeof S==='object'&&typeof settle==='function'&&!!document.querySelector('#app header')")) break; } catch {} await sleep(100); }
       await sleep(ms);
     },
     shot: async n => { const r = await cdp('Page.captureScreenshot', {format: 'png'}); fs.writeFileSync(path.join(OUT, n), Buffer.from(r.result.data, 'base64')); },
