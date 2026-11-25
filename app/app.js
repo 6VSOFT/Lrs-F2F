@@ -1,4 +1,4 @@
-const VER='v24'; // 与 sw.js 的版本号一致
+const VER='v25'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 身份与板子 ---------- */
 // c：阵营 god 神职 / villager 平民（含混血儿） / wolf 狼人
@@ -785,36 +785,49 @@ function copyFallback(t){
 /* ---------- 发言计时 ---------- */
 // end 是到点的时间戳（0=未在走），切到后台或刷新后仍然准
 const TDS=[60,90,120,180,300];
-let tm={dur:120,left:120e3,end:0},tmInt=0,audio=null;
-const tmLeft=()=>tm.end?Math.max(0,tm.end-Date.now()):tm.left;
+// 两个计时器，默认 2:00 和 1:30；同一时间只走一个，开始一个会暂停另一个
+let tms=[{dur:120,left:120e3,end:0},{dur:90,left:90e3,end:0}],tmInt=0,audio=null;
+const tmLeft=t=>t.end?Math.max(0,t.end-Date.now()):t.left;
 const tmText=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
-function tmSave(){try{localStorage.setItem('lrs-timer',JSON.stringify(tm));}catch(e){}}
-function timerHTML(){
- const l=tmLeft(),run=!!tm.end&&l>0;
- return `<div class="tm ${l<=0?'over':l<=1e4?'low':''}" id="tm"><span>发言计时</span><b id="tmv">${l<=0?'时间到':tmText(l)}</b><button class="btn" onclick="tmDur()">${tm.dur}秒</button><button class="btn" onclick="tmReset();tmDraw()">重置</button><button class="btn ${run?'':'act'}" onclick="tmGo()">${run?'暂停':l<=0?'下一位':'开始'}</button></div>`;
+function tmSave(){try{localStorage.setItem('lrs-timer',JSON.stringify(tms));}catch(e){}}
+const timerHTML=()=>tms.map((t,i)=>tmOne(t,i)).join('');
+function tmOne(t,i){
+ const l=tmLeft(t),run=!!t.end&&l>0;
+ return `<div class="tm ${l<=0?'over':l<=1e4?'low':''}" id="tm${i}"><span>发言计时</span><b>${l<=0?'时间到':tmText(l)}</b><button class="btn" onclick="tmDur(${i})">${t.dur}秒</button><button class="btn" onclick="tmReset(${i});tmDraw()">重置</button><button class="btn ${run?'':'act'}" onclick="tmGo(${i})">${run?'暂停':l<=0?'下一位':'开始'}</button></div>`;
 }
-function tmDraw(){const e=$('#tm');if(e)e.outerHTML=timerHTML();}
+function tmDraw(){tms.forEach((t,i)=>{const e=$('#tm'+i);if(e)e.outerHTML=tmOne(t,i);});}
 function tmTickOn(){clearInterval(tmInt);tmInt=setInterval(tmTick,200);}
 function tmTick(){
- const l=tmLeft();
- if(!tm.end){clearInterval(tmInt);return;}
- if(l<=0){tm.end=0;tm.left=0;clearInterval(tmInt);tmSave();tmDraw();if(!S.night)tmAlarm();return;}
- const v=$('#tmv');if(v){v.textContent=tmText(l);$('#tm').classList.toggle('low',l<=1e4);}
+ const i=tms.findIndex(t=>t.end),t=tms[i];
+ if(!t){clearInterval(tmInt);return;}
+ const l=tmLeft(t);
+ if(l<=0){t.end=0;t.left=0;clearInterval(tmInt);tmSave();tmDraw();if(!S.night)tmAlarm();return;}
+ const e=$('#tm'+i);if(e){e.querySelector('b').textContent=tmText(l);e.classList.toggle('low',l<=1e4);}
 }
-function tmGo(){
+function tmGo(i){
  try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();}catch(e){} // 手机须在点击时启用声音
- const l=tmLeft();
- if(tm.end&&l>0){tm.left=l;tm.end=0;}else{tm.end=Date.now()+(l>0?l:tm.dur*1e3);tmTickOn();}
+ const t=tms[i],l=tmLeft(t),go=!(t.end&&l>0);
+ tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});
+ if(go){t.end=Date.now()+(l>0?l:t.dur*1e3);tmTickOn();}
  tmSave();tmDraw();
 }
-function tmReset(){tm.end=0;tm.left=tm.dur*1e3;clearInterval(tmInt);tmSave();}
-function tmDur(){tm.dur=TDS[(TDS.indexOf(tm.dur)+1)%TDS.length];tmReset();tmDraw();}
+// 不带参数则全部重置
+function tmReset(i){tms.forEach((t,k)=>{if(i===undefined||k===i){t.end=0;t.left=t.dur*1e3;}});tmSave();}
+function tmDur(i){const t=tms[i];t.dur=TDS[(TDS.indexOf(t.dur)+1)%TDS.length];tmReset(i);tmDraw();}
 // 震动 + 三声提示；iPhone 不支持震动，只有声音
 function tmAlarm(){
  try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300]);}catch(e){}
  try{[0,.35,.7].forEach(t=>{const o=audio.createOscillator(),g=audio.createGain(),a=audio.currentTime+t;o.frequency.value=880;g.gain.setValueAtTime(.25,a);g.gain.exponentialRampToValueAtTime(.001,a+.28);o.connect(g);g.connect(audio.destination);o.start(a);o.stop(a+.3);});}catch(e){}
 }
-try{const t=JSON.parse(localStorage.getItem('lrs-timer'));if(t&&TDS.includes(t.dur)&&t.left>=0&&t.end>=0){tm={dur:t.dur,left:Math.min(t.left,t.dur*1e3),end:t.end};if(tm.end){if(tm.end<=Date.now()){tm.end=0;tm.left=0;}else if(tm.end-Date.now()>tm.dur*1e3)tmReset();else tmTickOn();}}}catch(e){}
+try{
+ const a=JSON.parse(localStorage.getItem('lrs-timer')); // v24 只存了一个计时器
+ (Array.isArray(a)?a:[a]).slice(0,2).forEach((t,i)=>{
+  if(!t||!TDS.includes(t.dur)||!(t.left>=0)||!(t.end>=0))return;
+  const x=tms[i]={dur:t.dur,left:Math.min(t.left,t.dur*1e3),end:0};
+  if(t.end&&t.end<=Date.now())x.left=0;else if(t.end&&t.end-Date.now()<=t.dur*1e3)x.end=t.end;
+ });
+ if(tms.some(t=>t.end))tmTickOn();
+}catch(e){}
 
 /* ---------- 夜间调暗大字 ---------- */
 let dimOn=true;

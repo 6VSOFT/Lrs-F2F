@@ -58,16 +58,26 @@ await part('隐藏模式', async () => {
   await ev('close_();S.hide=false;render()'); ok('关闭隐藏后正常', all(await ev(seen)) !== '' && !await ev("!!document.querySelector('header [data-peek]')")); await ev("openLog()"); ok('普通日志不遮', await ev("getComputedStyle(document.querySelector('#sheet .log span')).color!=='rgba(0, 0, 0, 0)'")); await ev('close_()');
 });
 await part('发言计时', async () => {
-  await ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle()})()`); ok('夜里没有计时器', !await ev("!!document.querySelector('#tm')"));
-  await ev('confirmDawn();close_()'); const v = () => ev("document.querySelector('#tmv').textContent"), tap = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm button')].find(b=>b.textContent.includes('${t}'))`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
+  await ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle()})()`); ok('夜里没有计时器', !await ev("!!document.querySelector('#tm0')"));
+  await ev('confirmDawn();close_()'); const v = () => ev("document.querySelector('#tm0 b').textContent"), tap = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm0 button')].find(b=>b.textContent.includes('${t}'))`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
   ok('默认 2 分钟', await v() === '2:00'); await tap('120秒'); ok('切换 180 秒', await v() === '3:00'); await tap('180秒'); await tap('300秒'); ok('循环到 60 秒', await v() === '1:00');
   await tap('开始'); await sleep(2100); const a = await v(); ok('在走', /^0:5[678]$/.test(a), a); await ev('render()'); ok('重绘不重置', /^0:5[5678]$/.test(await v()));
   await reload(); const b = await v(); await sleep(1300); ok('刷新后继续走', await v() < b, [b, await v()]);
   await tap('暂停'); const c = await v(); await sleep(1300); ok('暂停不动', await v() === c, [c, await v()]); await tap('开始'); await sleep(1200); ok('继续', await v() < c); await tap('重置'); ok('重置', await v() === '1:00');
-  await ev("window._vib=0;navigator.vibrate=x=>{window._vib=1;return true};tm.left=11500;tmDraw();void 0"); await tap('开始'); await sleep(2200); ok('最后 10 秒变色', await ev("document.querySelector('#tm').classList.contains('low')")); await ev('tm.end=Date.now()+400;void 0'); await sleep(1000);
-  ok('到点提示', await v() === '时间到' && await ev("document.querySelector('#tm').classList.contains('over')&&window._vib===1&&!!audio"));
-  await tap('下一位'); ok('下一位重新计时', /^(1:00|0:59)$/.test(await v())); await ev("doExile(0);nextNight()"); ok('天黑停止并重置', await ev("tm.end===0&&tm.left===60000")); await ev('tm.dur=120;tmReset()');
-  await ev("localStorage.setItem('lrs-timer','bad')"); await reload(); ok('坏存档不崩', await ev("tm.dur===120&&document.querySelectorAll('.seat').length===12"));
+  await ev("window._vib=0;navigator.vibrate=x=>{window._vib=1;return true};tms[0].left=11500;tmDraw();void 0"); await tap('开始'); await sleep(2200); ok('最后 10 秒变色', await ev("document.querySelector('#tm0').classList.contains('low')")); await ev('tms[0].end=Date.now()+400;void 0'); await sleep(1000);
+  ok('到点提示', await v() === '时间到' && await ev("document.querySelector('#tm0').classList.contains('over')&&window._vib===1&&!!audio"));
+  await tap('下一位'); ok('下一位重新计时', /^(1:00|0:59)$/.test(await v())); await ev("doExile(0);nextNight()"); ok('天黑停止并重置', await ev("tms.every(t=>!t.end&&t.left===t.dur*1e3)&&tms[0].dur===60")); await ev('tms[0].dur=120;tmReset()');
+  // 第二个计时器
+  await ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.n.knife=0;settle();confirmDawn();close_()})()`);
+  const v1 = () => ev("document.querySelector('#tm1 b').textContent"), tap1 = async t => { const [x, y] = await ev(rect(`[...document.querySelectorAll('#tm1 button')].find(b=>b.textContent.includes('${t}'))`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(150); };
+  ok('两个计时 2:00 与 1:30', await v() === '2:00' && await v1() === '1:30' && await ev("document.querySelectorAll('.tm').length") === 2);
+  await tap('开始'); await sleep(1300); const p0 = await v(); await tap1('开始'); await sleep(1300);
+  ok('开始一个会暂停另一个', await v() === p0 && /^1:2[789]$/.test(await v1()) && await ev("document.querySelector('#tm0').textContent.includes('开始')&&document.querySelector('#tm1').textContent.includes('暂停')"), [p0, await v(), await v1()]);
+  await reload(); const q1 = await v1(); await sleep(1300); ok('刷新后第二个继续、第一个不动', await v1() < q1 && await v() === p0, [q1, await v1(), p0, await v()]);
+  await ev("window._vib=0;navigator.vibrate=x=>{window._vib=1;return true};tms[1].end=Date.now()+400;void 0"); await sleep(1000); ok('第二个到点只提示自己', await v1() === '时间到' && await v() === p0 && await ev("window._vib===1&&document.querySelector('#tm1').classList.contains('over')&&!document.querySelector('#tm0').classList.contains('over')"));
+  await tap1('下一位'); ok('第二个下一位', /^1:(30|29)$/.test(await v1())); await tap1('重置'); ok('只重置自己', await v1() === '1:30' && await v() === p0); await tap1('90秒'); ok('各自换时长', await v1() === '2:00' && await v() === p0);
+  await ev("tms[1].dur=90;tmReset();localStorage.setItem('lrs-timer',JSON.stringify({dur:180,left:100000,end:0}))"); await reload(); ok('v24 旧存档', await v() === '1:40' && await v1() === '1:30');
+  await ev("localStorage.setItem('lrs-timer','bad')"); await reload(); ok('坏存档不崩', await ev("tms[0].dur===120&&tms[1].dur===90&&document.querySelectorAll('.seat').length===12"));
 });
 await part('夜间调暗大字', async () => {
   await ev("startGame('std')"); const dim = () => ev("document.documentElement.classList.contains('dim')");

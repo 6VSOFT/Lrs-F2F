@@ -1,4 +1,4 @@
-const V='werewolf-judge-v24';
+const V='werewolf-judge-v25';
 const FILES=['./','./index.html','./manifest.webmanifest','./app.js','./icon-192.png','./icon-512.png',
  ...'seer medium witch hunter idiot guard knight magician merchant dreamer grave witchhunter hybrid villager wolf wolfking demon beauty elder younger gargoyle mechwolf nightmare bloodmoon'.split(' ').map(k=>`./img/${k}.png`)];
 // 整套文件按版本缓存，带版本参数取文件以绕过 CDN 旧缓存；已有旧版在用时先等待，由页面提示用户更新
