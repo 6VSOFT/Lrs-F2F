@@ -2,7 +2,7 @@
 (() => {
 ADV = 0;
 const T = []; let pass = 0; const ok = (n, c, d) => { if (c) pass++; else T.push('FAIL ' + n + (d === undefined ? '' : ' ' + JSON.stringify(d))); };
-const B = (t, r = document) => [...r.querySelectorAll('button')].find(b => b.textContent.includes(t) && !b.disabled);
+const B = (t, r = document) => [...r.querySelectorAll('button')].find(b => b.textContent.includes(t) && !b.disabled && !(b.closest('#sheet') && !document.querySelector('#bg.show')));
 const pkb = n => [...document.querySelectorAll('.pk button')].find(x => x.querySelector('b').textContent == String(n));
 const tap = n => { const b = pkb(n); if (!b || b.disabled) throw Error('不能点 ' + n + ' ' + window._pkTitle); b.click(); };
 const rowOf = l => { const rs = [...document.querySelectorAll('.side .row')]; return rs.find(x => x.querySelector('span').textContent === l) || rs.find(x => x.querySelector('span').textContent.startsWith(l)); };
@@ -43,17 +43,17 @@ for (let g = 0; g < 120; g++) {
     for (const k of ['erlang', 'wukong']) if (key === k) {
      id(k); const f = k === 'wukong' ? 'wk' : 'el', me = at(k);
      if (!up(k)) continue;
-     const sealedSelf = false;
-     if (owns(k, 'C', d) && Math.random() < .6) { rb(TRN[k].C).click(); const c = k === 'wukong' ? 1 + ri(12) : pick(A().filter(x => x !== me && x !== at('wukong'))); if (c) { n[f + 'C'] = c; tap(c); } else none(); }
-     else if (owns(k, 'C', d) !== !!rowOf(TRN[k].C)) throw Error('C 行 ' + k);
-     if (owns(k, 'B', d) && !M[k].used) { if (Math.random() < .5) { rb(TRN[k].B).click(); n[f + 'B'] = pick(A().filter(x => x !== me)); tap(n[f + 'B']); } }
-     else if (rowOf(TRN[k].B)) throw Error('B 行不该有 ' + k);
-     if (woke(k, d)) { rb('查验身份').click(); const t = pick(A().filter(x => x !== me)); tap(t); const want = R[deck[t - 1]].n; if (!document.querySelector('.side .res').textContent.includes('身份：' + want)) throw Error('觉醒查验 ' + want); }
      const mx = 1 + (boost(k) ? 1 : 0); rb('寻宝').click(); const ts = shuf(A().filter(x => x !== me)).slice(0, mx).sort((a, b) => a - b); ts.forEach(tap); B('确定').click(); n[f + 'T'] = ts;
      for (const x of ts) if (!S.seats[x - 1].role) { if (B('下一步')) throw Error('未录入仍可下一步'); ok('未录入提示', side().includes(x + '号：身份未录入')); S.seats[x - 1].role = deck[x - 1]; settle(); }
      const have = {...M[k]}; const exp = ts.map(x => { const c = kind(x), got = !have[c]; if (got) have[c] = d; return `${x}号：${got ? '得 ' + c : '已有 ' + c}`; });
      const shown = [...document.querySelectorAll('.side .res')].map(e => e.textContent).filter(t => /号：(得|已有)/.test(t)).map(t => t.replace(/ (?:[^ ]+|已有.*)$/, s => s.startsWith(' ') && /得/.test(t) ? '' : s).replace(/(得 [ABC]).*/, '$1').replace(/(已有 [ABC]).*/, '$1'));
      if (shown.join() !== exp.join()) throw Error(`寻宝显示 ${shown} 期望 ${exp}`);
+     const wk2 = woke(k, d) || (!M[k].awake && !!(have.A && have.B && have.C)); n[f + 'H'] = have; n[f + 'W'] = wk2;
+     if (!!have.C && Math.random() < .6) { rb(TRN[k].C).click(); const c = k === 'wukong' ? 1 + ri(12) : pick(A().filter(x => x !== me && x !== at('wukong'))); if (c) { n[f + 'C'] = c; tap(c); } else none(); }
+     else if (!!have.C !== !!rowOf(TRN[k].C)) throw Error('C 行 ' + k);
+     if (!!have.B && !M[k].used) { if (Math.random() < .5) { rb(TRN[k].B).click(); n[f + 'B'] = pick(A().filter(x => x !== me)); tap(n[f + 'B']); } }
+     else if (rowOf(TRN[k].B)) throw Error('B 行不该有 ' + k);
+     if (wk2) { rb('查验身份').click(); const t = pick(A().filter(x => x !== me)); tap(t); const want = R[deck[t - 1]].n; if (![...document.querySelectorAll('.side .res')].some(e => e.textContent.includes('身份：' + want))) throw Error('觉醒查验 ' + want); }
      out.hunts += ts.length;
     }
     if (key === 'guanyin') {
@@ -62,7 +62,7 @@ for (let g = 0; g < 120; g++) {
       const can = !M.gyUsed && n.knife > 0 && n.knife !== gy;
       if (!!B('使用') !== can) throw Error('甘露水按钮 ' + can);
       if (can && Math.random() < .5) { B('使用').click(); n.gyS = true; }
-      if (Math.random() < .6) { rb('收服').click(); n.gyB = pick(A().filter(x => x !== gy)); tap(n.gyB); }
+      if (M.bound) { if (rb('收服')) throw Error('收服只能一次'); } else if (Math.random() < .6) { rb('收服').click(); n.gyB = pick(A().filter(x => x !== gy)); tap(n.gyB); }
      } else if (up('guanyin') && sealed && rb('收服') && !rb('收服').disabled) throw Error('观音被封印仍可收服');
     }
     if (key === 'heixiong') {
@@ -77,12 +77,12 @@ for (let g = 0; g < 120; g++) {
     next();
    }
    // 模型结算
-   const D = new Set(), wk = at('wukong'), el = at('erlang'), gy = at('guanyin'), inv = woke('wukong', d);
+   const D = new Set(), wk = at('wukong'), el = at('erlang'), gy = at('guanyin'), inv = n.wkW !== undefined ? n.wkW : woke('wukong', d);
    const kill = x => { if (!x || !alive.has(x)) return; if (inv && x === wk) return; D.add(x); };
-   const ring = up('wukong') && owns('wukong', 'C', d) && n.wkC ? [n.wkC === 1 ? 12 : n.wkC - 1, n.wkC, n.wkC === 12 ? 1 : n.wkC + 1].filter(x => x !== wk) : [];
+   const ring = up('wukong') && n.wkH && n.wkH.C && n.wkC ? [n.wkC === 1 ? 12 : n.wkC - 1, n.wkC, n.wkC === 12 ? 1 : n.wkC + 1].filter(x => x !== wk) : [];
    if (n.knife) { if (ring.includes(n.knife)) ; else if (n.gyS && up('guanyin') && n.knife !== gy) ; else kill(n.knife); }
-   if (n.elB && up('erlang')) { if (woke('erlang', d)) { if (!ring.includes(n.elB)) kill(n.elB); } else if (n.elB === wk) kill(wk); out.kills++; }
-   if (n.wkB && up('wukong')) { if (woke('wukong', d)) { if (n.wkB !== wk) D.add(n.wkB); } else if (n.wkB === el) D.add(el); out.kills++; }
+   if (n.elB && up('erlang')) { if (n.elW) { if (!ring.includes(n.elB)) kill(n.elB); } else if (n.elB === wk) kill(wk); out.kills++; }
+   if (n.wkB && up('wukong')) { if (n.wkW) { if (n.wkB !== wk) D.add(n.wkB); } else if (n.wkB === el) D.add(el); out.kills++; }
    if (D.has(gy) && M.bound && alive.has(M.bound)) D.add(M.bound);
    B('确认').click();
    D.forEach(x => alive.delete(x));
@@ -106,7 +106,7 @@ for (let g = 0; g < 120; g++) {
     if (!M[k].awake && M[k].A && M[k].B && M[k].C) { M[k].awake = d; out.awake++; }
     if (JSON.stringify([S.xy[k].A, S.xy[k].B, S.xy[k].C, S.xy[k].usedB, S.xy[k].awake]) !== JSON.stringify([M[k].A, M[k].B, M[k].C, M[k].used, M[k].awake])) throw Error('宝物状态 ' + k + JSON.stringify([S.xy[k], M[k]]));
    }
-   if (n.gyS) M.gyUsed = true; if (n.gyB) M.bound = n.gyB; M.lastZx = n.zx || 0;
+   if (n.gyS) M.gyUsed = true; if (n.gyB && !M.bound) M.bound = n.gyB; M.lastZx = n.zx || 0;
    if (M.win) break;
    close_();
    // 白天：记票放逐，核对唐僧 +0.5 与观音跟票
@@ -152,7 +152,10 @@ try {
  setup(); S.xy.wukong.C = 1; nightN({knife: 2, wkC: 1}); dawn(); ok('镇魔圈护左右（12-1-2）', !dead(2));
  setup(); S.xy.wukong.C = 1; nightN({knife: 1, wkC: 12}); dawn(); ok('镇魔圈不护孙悟空自己', dead(1) && S.win && S.win.why === '齐天大圣出局');
  setup(); S.xy.wukong.C = 1; S.seats[5].dead = 'exile'; S.seats[5].at = '第0天'; nightN({knife: 7, wkC: 6}); dawn(); ok('死者也占位', !dead(7));
- setup(); S.xy.wukong.C = 2; nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('当夜拿到不能用', !rowOf('镇魔圈'));
+ setup(); nightN({wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('当夜寻到即可用', !!rowOf('镇魔圈') && side().indexOf('得 C') < side().indexOf('镇魔圈'));
+ setup(); nightN({wkT: [5], wkC: 6, knife: 6}); dawn(); ok('当夜寻到的镇魔圈当夜生效', !dead(6) && S.xy.wukong.C === 2);
+ setup(); nightN({wkT: [6], wkC: 6, knife: 6}); nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('换人寻宝后旧宝物仍在', !!rowOf('镇魔圈'));
+ setup(); nightN({wkC: 6, knife: 6}); dawn(); ok('没寻到不能用', dead(6));
  setup(); S.xy.wukong.C = 1; nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('第 2 夜可用第 1 夜的宝物', !!rowOf('镇魔圈'));
  // 击杀宝物
  setup(); S.xy.erlang.B = 1; nightN({elB: 1}); dawn(); ok('三尖两刃刀点中大圣', dead(1) && S.win.side === 'wolf');
@@ -168,7 +171,11 @@ try {
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 1, awake: 1}); nightN({wkB: 6}); dawn(); ok('觉醒定海神针杀任意人', dead(6));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, awake: 1}); nightN({}); ok('觉醒二郎神入狼队', inPack(seat(9)));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜提示得 C', side().includes('得 C')); S.n.step = stepsOf().length - 1; dawn(); ok('集齐后觉醒', S.xy.erlang.awake === 2 && S.log.some(l => l.x.includes('集齐三件宝物')));
- ok('觉醒次夜起才生效', !woke('erlang')); nightN({}); ok('次夜生效', woke('erlang'));
+ ok('次夜仍觉醒', (nightN({}), woke('erlang')));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && !inPack(seat(9)));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5], elB: 6}); dawn(); ok('当夜觉醒三尖两刃刀杀任意人', dead(6));
+ setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [5], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
+ setup(); Object.assign(S.xy.wukong, {A: 1, B: 0, C: 1}); nightN({wkT: [3], wkB: 6}); dawn(); ok('当夜寻到定海神针并觉醒即杀任意人', dead(6) && S.xy.wukong.usedB);
  // 寻宝
  setup(); S.xy.wukong.A = 1; nightN({wkT: [10]}); dawn(); ok('同类已有空手', S.xy.wukong.A === 1 && S.log.some(l => l.x.includes('已有 A，空手')));
  setup(D0, {wkT: [5]}); dawn(); ok('点到唐僧得 C', S.xy.wukong.C === 1);
@@ -179,8 +186,9 @@ try {
  setup(); S.xy.erlang.C = 1; nightN({zx: 9, elC: 2}); ok('紫霞加持二郎神不受封印影响', picks('erlang') === 2);
  setup(D0, {zx: 4}); dawn(); nightN({}); S.n.step = stepsOf().indexOf('zixia'); render(); rb('加持').click(); ok('紫霞不能连续点同一人', pkb(4).disabled); close_();
  // 哮天犬
- setup(); S.xy.erlang.C = 1; nightN({elC: 3}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('哮天犬封印观音', side().includes('哮天犬封印') && rb('收服').disabled);
- S.n.step = stepsOf().indexOf('heixiong'); render(); ok('未封印的黑熊精照常', !side().includes('被哮天犬封印'));
+ ok('夜间顺序', stepsOf().join(' ').includes('zixia wolf guanyin erlang wukong heixiong'), stepsOf());
+ setup(); S.xy.erlang.C = 1; nightN({elC: 4}); S.n.step = stepsOf().indexOf('heixiong'); render(); ok('哮天犬封印黑熊精', side().includes('被哮天犬封印') && !document.querySelector('.side .res'));
+ setup(); S.xy.erlang.C = 1; nightN({elC: 3, gyB: 6}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('观音先行动，封印无效', !side().includes('被哮天犬封印') && !rb('收服').disabled); S.n.step = stepsOf().length - 1; dawn(); ok('观音照常收服', S.xy.bound === 6);
  setup(); S.xy.erlang.C = 1; nightN({}); S.n.step = stepsOf().indexOf('erlang'); render(); rb('哮天犬').click(); ok('哮天犬不能选大圣', pkb(1).disabled); close_();
  // 黑熊精与唐僧反转
  setup('wukong villager heixiong tianbing guanyin zixia villager villager erlang villager tianbing tianbing'.split(' ')); ok('唐僧在黑熊精旁', S.xy.tang === 2);
@@ -194,6 +202,8 @@ try {
  [...document.querySelectorAll('.vv button')].find(b => b.querySelector('b').textContent === '6').click(); ok('被收服者不能自己投', S.v.m[6] === undefined); close_(); S.v = null;
  doExile(3); ok('观音被放逐，收服者殉情', dead(6) && S.seats[5].dead === 'love');
  setup(D0, {gyB: 6}); dawn(); nightN({knife: 3}); dawn(); ok('观音夜里死亡，收服者殉情', dead(3) && dead(6));
+ setup(D0, {gyB: 6}); dawn(); nightN({gyB: 7}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('收服整局一次', !rb('收服') && side().includes('已用（6号') && !S.n.gyB); dawn(); ok('收服对象不变', S.xy.bound === 6);
+ setup(D0, {gyB: 6}); dawn(); S.seats[5].dead = 'exile'; S.seats[5].at = '第1天'; nightN({}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('收服者出局后不能再收', !rb('收服') && side().includes('已出局'));
  // 唐僧投票 +0.5
  setup(); dawn(); rb('投票明细').click(); const vc = c => [...document.querySelectorAll('.vc button')].find(b => b.querySelector('b').textContent === String(c)).click(), vv = v => [...document.querySelectorAll('.vv button')].find(b => parseInt(b.querySelector('b').textContent) === v).click();
  vc(9); vv(5); vc(10); vv(6); ok('唐僧一票算 1.5', document.querySelector('#sheet .pkf .pri').textContent.startsWith('放逐 9号'));

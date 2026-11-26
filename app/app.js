@@ -1,4 +1,4 @@
-const VER='v27'; // 与 sw.js 的版本号一致
+const VER='v28'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -48,7 +48,7 @@ const BOARDS={
   n1:'close wolf witch seer witchhunter idiot sheriff dawn',n2:'close wolf witch seer witchhunter dawn'},
  // 西游杀：两位领袖每晚“寻宝”，集齐三件宝物觉醒；离孙悟空最近的平民是唐僧（本人不知道）
  xiyou:{name:'西游杀',desc:'悟空紫霞观音黑熊 + 4民 + 二郎神 + 3天兵',cnt:{wukong:1,zixia:1,guanyin:1,heixiong:1,villager:4,erlang:1,tianbing:3},pack:['tianbing'],wn:'天兵',
-  n1:'close zixia wolf erlang wukong guanyin heixiong sheriff dawn',n2:'close zixia wolf erlang wukong guanyin heixiong dawn'}};
+  n1:'close zixia wolf guanyin erlang wukong heixiong sheriff dawn',n2:'close zixia wolf guanyin erlang wukong heixiong dawn'}};
 for(const b of Object.values(BOARDS)){b.n1=b.n1.split(' ');b.n2=b.n2.split(' ');}
 const CAUSE={exile:'放逐出局',night:'夜间阵亡',shot:'枪杀出局',duel:'决斗出局',boom:'自爆出局',love:'殉情出局'};
 const SKILL={check:'查验',poison:'毒药',gun:'猎枪'};
@@ -113,9 +113,10 @@ const seatsOf=k=>S.seats.filter(s=>s.role===k);
 const one=k=>seatsOf(k)[0];
 const seat=n=>S.seats[n-1];
 const isWolf=s=>!!(s&&s.role&&R[s.role].c==='wolf');
-const inPack=s=>isWolf(s)&&(BD().pack.includes(s.role)||(s.role==='erlang'&&woke('erlang'))||(s.role==='nightmare'&&S.day>1)||(s.role==='younger'&&S.awakeDay!==null&&S.awakeDay<S.day));
+const inPack=s=>isWolf(s)&&(BD().pack.includes(s.role)||(s.role==='erlang'&&wokeOld('erlang'))||(s.role==='nightmare'&&S.day>1)||(s.role==='younger'&&S.awakeDay!==null&&S.awakeDay<S.day));
 const XY=()=>S.xy;
-const woke=k=>!!S.xy[k].awake&&S.xy[k].awake<S.day; // 觉醒从下一夜起生效
+const wokeOld=k=>!!S.xy[k].awake&&S.xy[k].awake<S.day; // 之前的夜晚已觉醒
+const woke=k=>wokeOld(k)||(S.night&&!S.xy[k].awake&&'ABC'.split('').every(c=>owns(k,c))); // 今晚集齐也当夜觉醒
 const packWant=()=>BD().pack.reduce((a,k)=>a+cntOf(k),0);
 const nm=n=>S.names[n-1]?' '+S.names[n-1]:'';
 const lab=n=>`${n}号${nm(n)}`;
@@ -180,7 +181,7 @@ function blocked(k){
  if(s.dead)return 'dead';
  if(S.n.fear===s.n&&k!=='nightmare')return 'fear';
  if(S.sealed===S.day&&R[k].c==='god')return 'seal';
- if(S.board==='xiyou'&&S.n.elC===s.n&&['guanyin','heixiong'].includes(k))return 'dog'; // 哮天犬；紫霞已先行动，孙悟空免疫
+ if(S.board==='xiyou'&&S.n.elC===s.n&&k==='heixiong')return 'dog'; // 哮天犬只封印之后行动的黑熊精；紫霞、观音已先行动，孙悟空免疫
  return '';
 }
 const BLK={dead:'已出局：照常念口令，空喊流程。',fear:'今夜被噩梦之影恐惧，不能使用技能，口令照念。',seal:'今夜被血月封印，不能使用技能，口令照念。',dog:'今夜被哮天犬封印，不能使用技能，口令照念。'};
@@ -247,7 +248,7 @@ function noShoot(x){
 const TR={wukong:{A:'火眼金睛',B:'定海神针',C:'镇魔圈'},erlang:{A:'天眼',B:'三尖两刃刀',C:'哮天犬'}};
 const LEAD={wukong:'孙悟空',erlang:'二郎神'};
 const kindOf=s=>isWolf(s)?'A':R[s.role].c==='god'?'B':'C'; // 点到狼人 A，神职 B，平民（含唐僧）C
-const owns=(k,c)=>{const t=XY()[k][c];return !!t&&t<S.day;}; // 之前的夜晚已拿到，今晚可用
+const owns=(k,c)=>{const t=XY()[k][c];return (!!t&&t<S.day)||(S.night&&huntRes(k).some(r=>r.got&&r.c===c));}; // 之前拿到或今晚刚寻到，当夜即可使用
 // 西游杀的平民用西游风格的图
 const pic=(k,b=S.board)=>k==='villager'&&b==='xiyou'?'villager-xy':k;
 const ring12=x=>[x===1?12:x-1,x,x===12?1:x+1];
@@ -308,7 +309,7 @@ function xyEnforce(){
  }
  const gy=one('guanyin');
  if(n.gyS&&(!(n.knife>0)||x.gyUsed||!gy||n.knife===gy.n))n.gyS=false;
- if(n.gyB&&gy&&n.gyB===gy.n)n.gyB=null;
+ if(n.gyB&&(x.bound||gy&&n.gyB===gy.n))n.gyB=null;
  if(n.elC&&one('wukong')&&n.elC===one('wukong').n)n.elC=null; // 哮天犬对齐天大圣无效
  if(n.zx&&n.zx===x.lastZx)n.zx=null;
 }
@@ -331,9 +332,9 @@ function xyCarry(){
   const f=k==='wukong'?'wk':'el',t=x[k];
   if(n[f+'B']>0)t.usedB=true;
   for(const r of huntRes(k))if(r.got)t[r.c]=S.day;
-  if(!t.awake&&t.A&&t.B&&t.C){t.awake=S.day;L(`${LEAD[k]}集齐三件宝物，下一夜起觉醒`);}
+  if(!t.awake&&t.A&&t.B&&t.C){t.awake=S.day;L(`${LEAD[k]}集齐三件宝物，觉醒`);}
  }
- if(n.gyS)x.gyUsed=true;if(n.gyB>0)x.bound=n.gyB;
+ if(n.gyS)x.gyUsed=true;if(n.gyB>0&&!x.bound)x.bound=n.gyB; // 整局只收服一人
  x.lastZx=n.zx||0;
 }
 function pickHunt(k){
@@ -345,15 +346,15 @@ function leadStep(k){
  let body=idRow(k)+(dead?note(R[k].n+BLK.dead):'');
  if(s&&!dead){
   const have='ABC'.split('').filter(c=>t[c]).map(c=>`${c} ${TR[k][c]}`).join('、');
-  body+=note(`已有宝物：${have||'无'}${t.awake?'（已觉醒）':''}`);
-  if(owns(k,'C'))body+=tgt(TR[k].C,f+'C',{none:'不使用'})+note(k==='wukong'?'保护该号码及左右共 3 人今夜不被狼刀和三尖两刃刀杀死，死者也占位；不护孙悟空自己。':'封印该号码今夜的技能，对齐天大圣无效。');
-  if(owns(k,'B')&&!t.usedB)body+=tgt(TR[k].B+'（一次）',f+'B',{none:'不使用'})+note(woke(k)?'已觉醒：可直接击杀任意一人。':`点中${ex}则其直接死亡，点错无效。`);
-  if(woke(k))body+=tgt('查验身份',f+'A')+(S.n[f+'A']>0?res(1,`身份：${exactName(seat(S.n[f+'A']))}`):'');
+  body+=note(`之前已有：${have||'无'}${t.awake?'（已觉醒）':''}`);
   const T=S.n[f+'T']||[],h=huntRes(k),max=picks(k);
   body+=row(`寻宝 ${T.length}/${max}`,T.length?T.join('、')+'号':'<i>未选</i>','选择',`pickHunt('${k}')`)+(boosted(k)?note('紫霞仙子加持：今晚多寻宝一次。'):'')+
-   h.map(r=>!r.c?res(0,`${r.x}号：身份未录入，请先点座位录入`):r.got?res(1,`${r.x}号：得 ${r.c} ${TR[k][r.c]}`):res(0,`${r.x}号：已有 ${r.c}，空手`)).join('')+note('点到狼人得 A、神职得 B、平民得 C；同类宝物只拿一次，新宝物下一夜起可用。集齐三件后觉醒。');
+   h.map(r=>!r.c?res(0,`${r.x}号：身份未录入，请先点座位录入`):r.got?res(1,`${r.x}号：得 ${r.c} ${TR[k][r.c]}`):res(0,`${r.x}号：已有 ${r.c}，空手`)).join('')+note('点到狼人得 A、神职得 B、平民得 C；同类宝物只拿一次，新宝物当夜即可使用，集齐三件当夜觉醒。');
+  if(owns(k,'C'))body+=tgt(TR[k].C,f+'C',{none:'不使用'})+note(k==='wukong'?'保护该号码及左右共 3 人今夜不被狼刀和三尖两刃刀杀死，死者也占位；不护孙悟空自己。':'封印该号码今夜的技能：只对之后行动的黑熊精有效；点紫霞则孙悟空今晚拿不到加持；对齐天大圣无效。');
+  if(owns(k,'B')&&!t.usedB)body+=tgt(TR[k].B+'（一次）',f+'B',{none:'不使用'})+note(woke(k)?'已觉醒：可直接击杀任意一人。':`点中${ex}则其直接死亡，点错无效。`);
+  if(woke(k))body+=tgt('查验身份',f+'A')+(S.n[f+'A']>0?res(1,`身份：${exactName(seat(S.n[f+'A']))}`):'');
  }
- return {t:LEAD[k],say:eye(k)+(S.day===1?'请确认你的身份。':'')+'请使用宝物，并点人寻宝。”<br>（法官用手势告知寻宝结果）'+shut(k),body,ok:has(k)&&(!s||dead||((S.n[f+'T']||[]).length===picks(k)&&huntRes(k).every(r=>r.c)))};
+ return {t:LEAD[k],say:eye(k)+(S.day===1?'请确认你的身份。':'')+'请点人寻宝，然后使用宝物。”<br>（法官用手势告知寻宝结果）'+shut(k),body,ok:has(k)&&(!s||dead||((S.n[f+'T']||[]).length===picks(k)&&huntRes(k).every(r=>r.c)))};
 }
 const XYSTEPS={
  zixia:()=>{const b=blocked('zixia');return {t:'紫霞仙子',say:eye('zixia')+'今晚你要加持谁？”<br>（比划号码）'+shut('zixia'),
@@ -361,9 +362,9 @@ const XYSTEPS={
  erlang:()=>leadStep('erlang'),
  wukong:()=>leadStep('wukong'),
  guanyin:()=>{const b=blocked('guanyin'),n=S.n,g=one('guanyin'),self=g&&n.knife===g.n,ok2=!b&&!XY().gyUsed&&n.knife>0&&!self;
-  return {t:'观音',say:(n.knife>0?`“观音请睁眼。昨晚<em class="k">【${n.knife}】号</em>玩家被袭击，是否使用甘露水？`:'“观音请睁眼。昨晚无人被袭击。')+'<br>今晚你要收服谁？”<br>“观音请闭眼。”',
+  return {t:'观音',say:(n.knife>0?`“观音请睁眼。昨晚<em class="k">【${n.knife}】号</em>玩家被袭击，是否使用甘露水？`:'“观音请睁眼。昨晚无人被袭击。')+(XY().bound?'”':'<br>今晚你要收服谁？”')+'<br>“观音请闭眼。”',
    body:idRow('guanyin')+blkNote('guanyin')+`<div class="row"><span>甘露水</span><b>${XY().gyUsed?'已用':n.gyS?'救 '+n.knife+'号':'可用'}</b><button class="btn ${n.gyS?'act':''}" ${ok2||n.gyS?'':'disabled'} onclick="upd(()=>S.n.gyS=!S.n.gyS)">${n.gyS?'取消':'使用'}</button></div>`+(self?note('观音不能自救。'):'')+
-    tgt('收服','gyB',{none:'不收服',dis:b})+note(`被收服的玩家投票自动跟观音；观音出局时他一同殉情。${XY().bound&&!seat(XY().bound).dead?`现在收服的是 ${XY().bound}号。`:''}`),ok:has('guanyin')};},
+    (XY().bound?row('收服',`已用（${XY().bound}号${seat(XY().bound).dead?'，已出局':''}）`):tgt('收服（一次）','gyB',{none:'不收服',dis:b}))+note('整局只能收服一人。被收服的玩家投票自动跟观音；观音出局时他一同殉情。'),ok:has('guanyin')};},
  heixiong:()=>{const b=blocked('heixiong'),h=one('heixiong'),x=h&&!h.dead&&!b?bearSide():null;
   return {t:'黑熊精',say:eye('heixiong')+(S.day===1?'请确认你的身份。':'')+'”<br>（两侧有狼就“咆哮”：法官给确认手势）'+shut('heixiong'),
    body:idRow('heixiong')+blkNote('heixiong')+(x?res(!x.say,`两侧 ${x.pair.join('、')}号：${x.say?'咆哮（有狼）':'不咆哮（没狼）'}`)+(x.tang?note('唐僧在黑熊精旁边：结果已反转。'):''):''),ok:has('heixiong')};}
@@ -410,7 +411,7 @@ const STEPS={
   return {t:wn,say:(S.day===1?'“狼人请睁眼，请确认彼此身份。'+(mk?R[mk].n+'请举手示意。':'')+'今晚你们要袭击谁？请统一意见。”<br>（狼人比划号码，法官确认落刀目标）':'“狼人请睁眼。今晚袭击谁？”')+'<br>“狼人请闭眼。”',
    body:(S.day===1?row(`狼人 ${ws.length}/${wt}`,ws.length?ws.join('、')+'号':'<i>未录入</i>','选择','pickWolves()')+(mk?row(R[mk].n,val(m&&m.n),'选择',`pickOne('${mk}')`,ws.length!==wt):''):'')+
     (S.board==='xiyou'&&!alive&&S.day>1?note('天兵已全部出局，二郎神觉醒前不能刀人：选“空刀”。'):S.day>1&&!alive?note(solo.length?`狼队已全部出局，${solo.map(s=>R[s.role].n).join('、')}带刀（比划手势告知）。`:'狼队已全部出局，选“空刀”。'):'')+
-    (S.board==='xiyou'&&woke('erlang')?note('二郎神已觉醒，与天兵一起商量刀人。'):'')+note(S.board==='xiyou'?'天庭阵营全局不能自爆。':'').replace('<div class="note"></div>','')+(pf?note('狼队有人被恐惧，今夜不能刀人。'):'')+tgt('刀口','knife',{none:'空刀',dis:pf}),
+    (S.board==='xiyou'&&wokeOld('erlang')?note('二郎神已觉醒，与天兵一起商量刀人。'):'')+note(S.board==='xiyou'?'天庭阵营全局不能自爆。':'').replace('<div class="note"></div>','')+(pf?note('狼队有人被恐惧，今夜不能刀人。'):'')+tgt('刀口','knife',{none:'空刀',dis:pf}),
    ok:S.n.knife!==null&&(S.day>1||(ws.length===wt&&(!mk||!!m)))};},
  beauty:()=>{const b=blocked('beauty');return {t:'狼美人',say:eye('beauty')+'今晚你要魅惑谁？”<br>（比划号码）'+shut('beauty'),
   body:idRow('beauty')+blkNote('beauty')+tgt('魅惑','charm',{none:'不魅惑',dis:b})+note(`狼美人出局时，被魅惑者一同殉情且不能发动技能；被骑士决斗出局则不触发。不能连续两夜魅惑同一人${S.lastCharm?`（昨夜魅惑 ${S.lastCharm}号）`:''}，不能自刀、自爆。`),ok:has('beauty')&&(!!b||S.n.charm!==null)};},

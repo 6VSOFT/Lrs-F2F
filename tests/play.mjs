@@ -142,9 +142,9 @@ async function game(bd){
    if(n.mknife&&!safe(n.mknife)&&n.guard!==n.mknife)add(n.mknife,'knife');
    if(n.hunt)add(isW(n.hunt)?n.hunt:at('witchhunter'),'hunt');if(n.trade&&isW(n.trade.n))add(at('merchant'),'trade');
    if(n.dream&&n.dream===X.ld)add(n.dream,'dream');if(has('dreamer')&&n.dream&&D.has(at('dreamer')))add(n.dream,'dream');if(has('beauty')&&n.charm&&D.has(at('beauty')))add(n.charm,'love');return D;};
-  const xyDeaths=()=>{const D=new Map(),wk=at('wukong'),el=at('erlang'),gy=at('guanyin'),woke=k=>!!XM[k].awake&&XM[k].awake<d,inv=woke('wukong');
+  const xyDeaths=()=>{const D=new Map(),wk=at('wukong'),el=at('erlang'),gy=at('guanyin'),woke=k=>n[(k==='wukong'?'wk':'el')+'W']!==undefined?n[(k==='wukong'?'wk':'el')+'W']:!!XM[k].awake&&XM[k].awake<d,inv=woke('wukong');
    const add=x=>{if(x&&alive.has(x)&&!D.has(x)&&!(inv&&x===wk))D.set(x,'xy');};
-   const ring=alive.has(wk)&&XM.wukong.C&&XM.wukong.C<d&&n.wkC?[n.wkC===1?12:n.wkC-1,n.wkC,n.wkC===12?1:n.wkC+1].filter(x=>x!==wk):[];
+   const ring=alive.has(wk)&&n.wkH&&n.wkH.C&&n.wkC?[n.wkC===1?12:n.wkC-1,n.wkC,n.wkC===12?1:n.wkC+1].filter(x=>x!==wk):[];
    if(n.knife>0&&!ring.includes(n.knife)&&!(n.gyS&&alive.has(gy)&&n.knife!==gy))add(n.knife);
    if(n.elB&&alive.has(el)){if(woke('erlang')){if(!ring.includes(n.elB))add(n.elB);}else if(n.elB===wk)add(wk);}
    if(n.wkB&&alive.has(wk)){if(woke('wukong')){if(n.wkB!==wk)D.set(n.wkB,'xy');}else if(n.wkB===el)D.set(el,'xy');}
@@ -201,19 +201,20 @@ async function game(bd){
     for(const k of ['erlang','wukong'])if(key===k){
      await ident(k);const f=k==='wukong'?'wk':'el',me=at(k);
      if(up(k)){
-      need(owns(k,'C')===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].C)})`)),'C row '+k);
-      if(owns(k,'C')&&rnd()<.6){if(k==='wukong'){await rb(TRN[k].C);n.wkC=1+ri(12);await pk(n.wkC);}else await T2(TRN[k].C,'elC',A.filter(x=>x!==me&&x!==at('wukong')),{none:1});}
-      need((owns(k,'B')&&!XM[k].used)===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].B)})`)),'B row '+k);
-      if(owns(k,'B')&&!XM[k].used&&rnd()<.5)await T2(TRN[k].B,f+'B',A.filter(x=>x!==me));
-      if(woke(k)){await T2('查验身份',f+'A',A.filter(x=>x!==me));need((await res1()).includes('身份：'+R[deck[n[f+'A']-1]].n),'awake check');}
       const mx=1+(boost(k)?1:0),ts=shuf(A.filter(x=>x!==me)).slice(0,mx).sort((a,b)=>a-b);await rb('寻宝');for(const x of ts)await pk(x);await btn('确定');n[f+'T']=ts;
       for(const x of ts)if(!(await st()).seats[x-1].role){need(!await ev("!!Q.btn('下一步')"),'unrecorded next');await seatT(x);await btn('录入身份');await tap(`[...document.querySelectorAll('.rp button')].find(b=>b.textContent.includes(${JSON.stringify(R[deck[x-1]].n)}))`);G.xyRec=(G.xyRec||0)+1;}
       const have={...XM[k]},exp=ts.map(x=>{const c=kindOf(x),got=!have[c];if(got)have[c]=d;return `${x}号：${got?'得 '+c:'已有 '+c}`;});
       const shown=(await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).filter(t=>/号：(得|已有)/.test(t)).join('|')")).split('|').filter(Boolean).map(t=>t.replace(/(得 [ABC]|已有 [ABC]).*/,'$1'));
       need(shown.join()===exp.join(),`hunt ${shown} exp ${exp}`);G.hunt=(G.hunt||0)+ts.length;
+      const wk2=woke(k)||(!XM[k].awake&&!!(have.A&&have.B&&have.C));n[f+'H']=have;n[f+'W']=wk2;
+      need(!!have.C===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].C)})`)),'C row '+k);
+      if(!!have.C&&rnd()<.6){if(k==='wukong'){await rb(TRN[k].C);n.wkC=1+ri(12);await pk(n.wkC);}else await T2(TRN[k].C,'elC',A.filter(x=>x!==me&&x!==at('wukong')),{none:1});}
+      need((!!have.B&&!XM[k].used)===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].B)})`)),'B row '+k);
+      if(!!have.B&&!XM[k].used&&rnd()<.5)await T2(TRN[k].B,f+'B',A.filter(x=>x!==me));
+      if(wk2){await T2('查验身份',f+'A',A.filter(x=>x!==me));need((await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).join('|')")).includes('身份：'+R[deck[n[f+'A']-1]].n),'awake check');}
      }
     }
-    if(key==='guanyin'){await ident('guanyin');const gy=at('guanyin');if(up('guanyin')&&n.elC!==gy){const cn=!XM.gyUsed&&n.knife>0&&n.knife!==gy;need(!!(await ev("!!Q.btn('使用')"))===cn,'gy save btn');if(cn&&rnd()<.5){await btn('使用');n.gyS=1;}if(rnd()<.6)await T2('收服','gyB',A.filter(x=>x!==gy));}}
+    if(key==='guanyin'){await ident('guanyin');const gy=at('guanyin');if(up('guanyin')&&n.elC!==gy){const cn=!XM.gyUsed&&n.knife>0&&n.knife!==gy;need(!!(await ev("!!Q.btn('使用')"))===cn,'gy save btn');if(cn&&rnd()<.5){await btn('使用');n.gyS=1;}if(XM.bound)need(!await ev("!!(Q.row('收服')&&Q.row('收服').querySelector('button'))"),'bind once');else if(rnd()<.6)await T2('收服','gyB',A.filter(x=>x!==gy));}}
     if(key==='heixiong'){await ident('heixiong');const h=at('heixiong');if(up('heixiong')&&n.elC!==h){const near=dir=>{for(let i=1;i<12;i++){const x=((h-1+dir*i)%12+12)%12+1;if(alive.has(x)&&x!==h)return x;}return 0;};const pair=[...new Set([near(-1),near(1)].filter(Boolean))],wf=pair.some(isW),t2=pair.includes(tang),say=t2?!wf:wf;const t=await res1();need(t.includes('咆哮（有狼）')===say&&t.includes(pair.join('、')),'bear '+t+' exp '+say);if(t2)G.bearFlip=(G.bearFlip||0)+1;}}
    }
    if(key==='sheriff'){X.polled=shuf(A).slice(0,2+ri(3));await rb('上警');for(const x of X.polled)await pk(x);await btn('确定');need((await st()).police.join()===[...X.polled].sort((a,b)=>a-b).join(),'police');}
@@ -230,7 +231,7 @@ async function game(bd){
   for(const x of dl)if(gunK(x)&&noGun(x))NG.add(x);if(n.learn&&!X.learn){X0={role:deck[n.learn-1]};if(X0.role==='hunter'&&D.has(at('mechwolf')))NG.add(at('mechwolf'));}if(n.trade&&!isW(n.trade.n)){L0={n:n.trade.n,sk:n.trade.sk};if(L0.sk==='gun'&&D.has(L0.n))NG.add(L0.n);}
   await adv('确认');for(const x of dl)kill(x,'night',`第${d}夜`);
   await chk('dawn');if(rnd()<.2)await reload().then(async()=>{if(win)await ev('0');});
-  if(XY){for(const k of ['erlang','wukong']){const f=k==='wukong'?'wk':'el';if(n[f+'B'])XM[k].used=true;for(const x of n[f+'T']||[]){const c=kindOf(x);if(!XM[k][c])XM[k][c]=d;}if(!XM[k].awake&&XM[k].A&&XM[k].B&&XM[k].C){XM[k].awake=d;G.awake=(G.awake||0)+1;}const sx=(await st()).xy[k];need(JSON.stringify([sx.A,sx.B,sx.C,sx.usedB,sx.awake])===JSON.stringify([XM[k].A,XM[k].B,XM[k].C,XM[k].used,XM[k].awake]),'treasure '+k);}if(n.gyS)XM.gyUsed=true;if(n.gyB)XM.bound=n.gyB;XM.lastZx=n.zx||0;if(d===1)need((await st()).xy.tang===tang,'tang');}
+  if(XY){for(const k of ['erlang','wukong']){const f=k==='wukong'?'wk':'el';if(n[f+'B'])XM[k].used=true;for(const x of n[f+'T']||[]){const c=kindOf(x);if(!XM[k][c])XM[k][c]=d;}if(!XM[k].awake&&XM[k].A&&XM[k].B&&XM[k].C){XM[k].awake=d;G.awake=(G.awake||0)+1;}const sx=(await st()).xy[k];need(JSON.stringify([sx.A,sx.B,sx.C,sx.usedB,sx.awake])===JSON.stringify([XM[k].A,XM[k].B,XM[k].C,XM[k].used,XM[k].awake]),'treasure '+k);}if(n.gyS)XM.gyUsed=true;if(n.gyB&&!XM.bound)XM.bound=n.gyB;XM.lastZx=n.zx||0;if(d===1)need((await st()).xy.tang===tang,'tang');}
   X.lg=n.guard||0;X.ld=n.dream||0;X.lc=n.charm||0;if(n.swap)X.sw.push(...n.swap);if(n.anti)X.uA=1;if(n.poison)X.uP=1;if(n.aw)X.awake=d;
   if(n.trade){X.traded=1;if(!isW(n.trade.n))X.lucky={n:n.trade.n,sk:n.trade.sk,used:0};}if(X.lucky&&(n.lcheck||n.lpoison))X.lucky.used=1;if(n.learn&&!X.learn)X.learn={role:deck[n.learn-1]};if(n.mpoison)X.mp=1;if(n.mguard)X.mgd=1;
   if(win)break;
