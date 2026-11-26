@@ -1,7 +1,7 @@
-const VER='v29'; // 与 sw.js 的版本号一致
+const VER='v30'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
-const IC={eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
+const IC={vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
  more:'M5 12h.01M12 12h.01M19 12h.01',badge:'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.500-.8Z',vote:'M4 11h16v9H4ZM8 11V4h8v7M9.500 15.500h5',moon:'M20 14.500A8.500 8.500 0 0 1 9.500 4 8.500 8.500 0 1 0 20 14.500Z',
  gun:'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM12 2v5M12 17v5M2 12h5M17 12h5',redo:'M4 12a8 8 0 1 0 2.600-5.900L4 8.500M4 4v4.500h4.500',edit:'M4 20l1-4.500L16 4.500l3.500 3.500L8.500 19ZM14 6.500l3.500 3.500',tag:'M4 4h8l8 8-8 8-8-8ZM8 8h.01',
  undo:'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',log:'M6 3h12v18H6ZM9.500 8h5M9.500 12h5M9.500 16h3',copy:'M9 9h11v11H9ZM5 15H4V4h11v1',folder:'M3 6h6l2 2h10v11H3Z',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.400 1.400M17.600 17.600L19 19M5 19l1.400-1.400M17.600 6.400L19 5',
@@ -478,7 +478,7 @@ function wizard(){
  const key=st[S.n.step],x=STEPS[key](),ok=x.ok===undefined||x.ok;
  const dots=st.map((k,i)=>`<i class="${i<S.n.step?'d':i===S.n.step?'c':''}"></i>`).join('');
  return `<div class="wiz ${S.hide&&key!=='close'&&key!=='sheriff'?'mask':''}"><div class="wh"><span class="lbl"><small>${label()} · ${S.n.step+1}/${total}<span class="sr"> · </span></small><b>${x.t}</b></span><div class="dots">${dots}</div></div>
-  ${say(x.say)}${x.body}
+  ${say(x.say)}${TTS?`<div class="spk"><button class="btn" onclick="speak()">${ic('vol')} 朗读口令</button></div>`:''}${x.body}
   <div class="wf"><button class="btn" ${S.n.step?'':'disabled'} onclick="upd(()=>S.n.step--)">← 上一步</button>
   ${key==='dawn'?`<button class="btn pri" style="flex:2" onclick="adv(confirmDawn)">确认 · 天亮 →</button>`:`<button class="btn pri" style="flex:2" ${ok?'':'disabled'} onclick="adv(()=>upd(()=>S.n.step++))">下一步 →</button>`}</div></div>`;
 }
@@ -827,13 +827,14 @@ function render(){
   ${home?'':`${S.hide?`<button class="ib" data-peek title="按住查看">按住看</button>`:''}<button class="ib ${S.hide?'on':''}" onclick="togHide()" title="${S.hide?'显示身份':'隐藏身份'}" aria-label="${S.hide?'显示身份':'隐藏身份'}">${ic(S.hide?'eyeoff':'eye')}</button>`}
   <button class="ib" onclick="openMenu()" title="菜单" aria-label="菜单">${ic('more')}<span class="sr">⋯</span></button></header>`;
  if(home)h+=homeHTML();else{
- h+=`<main class="lay" id="top" tabindex="-1"><section class="side">${updBar()}${winBar()}${S.night?wizard():dayPanel()}</section><section class="seatsec"><div class="lbl"><strong>座位</strong>点座位标记状态</div><div class="grid ${S.hide?'hide':''}">${S.seats.map(seatHTML).join('')}</div></section></main>`;
+ h+=`<main class="lay" id="top" tabindex="-1"><section class="side">${updBar()}${winBar()}${S.night?wizard():dayPanel()}${S.board==='xiyou'?xyPanel():''}</section><section class="seatsec"><div class="lbl"><strong>座位</strong>点座位标记状态</div><div class="grid ${S.hide?'hide':''}">${S.seats.map(seatHTML).join('')}</div></section></main>`;
  const al=S.seats.filter(s=>!s.dead),c=k=>S.hide?'?':al.filter(s=>s.role&&R[s.role].c===k).length;
  h+=`<div class="stats"><div class="in"><div class="st w"><b>${c('wolf')}</b>狼人</div><div class="st g"><b>${c('god')}</b>神职</div><div class="st v"><b>${c('villager')}</b>平民</div><div class="st"><b>${al.length}</b>存活</div><button class="btn" onclick="openLog()">记录</button></div></div>`;
  }
  $('#app').innerHTML=h;
  document.documentElement.classList.toggle('dim',dimOn&&S.night&&!home);document.documentElement.classList.toggle('day',!S.night);
  $('meta[name=theme-color]').content=S.night?'#2b2216':'#e9e1d2';
+ autoSpeak();
 }
 function seatHTML(s){
  const r=s.role&&R[s.role],tags=[],n=S.n,nt=(c,t)=>tags.push(`<span class="tag nt ${c}">${t}</span>`);
@@ -918,7 +919,7 @@ function archive(){
 }
 function openHistory(){
  const a=loadHist();
- sheet(`<h2>${ic('folder')} 历史对局</h2>${a.length?`<div class="hs">${a.map(g=>`<button class="btn" onclick="openHist('${g.id}')"><b>${bdName(g)}</b><small>${when(g)} · ${g.day} 天</small><small class="${g.win?g.win.side:''}">${g.win?winText(g.win):'未分胜负'}</small></button>`).join('')}</div>`:note('还没有历史对局。新开一局时，上一局会自动存到这里。')}${note(`最多保留最近 ${HMAX} 局，只存在本机。`)}`);
+ sheet(`<h2>${ic('folder')} 历史对局</h2>${bkDue()?`<div class="res bad">${ic('warn')} 已存 ${a.length} 局，${bkAt()?'超过 7 天':'还从来'}没有导出备份。<button class="btn" onclick="openBackup()">去备份</button></div>`:''}${a.length?`<div class="hs">${a.map(g=>`<button class="btn" onclick="openHist('${g.id}')"><b>${bdName(g)}</b><small>${when(g)} · ${g.day} 天</small><small class="${g.win?g.win.side:''}">${g.win?winText(g.win):'未分胜负'}</small></button>`).join('')}</div>`:note('还没有历史对局。新开一局时，上一局会自动存到这里。')}${note(`最多保留最近 ${HMAX} 局，只存在本机。`)}`);
 }
 function openHist(id){
  const g=hist(id);if(!g)return openHistory();
@@ -944,7 +945,10 @@ function openMenu(){
   <button class="btn" onclick="copyLog()">${ic('copy')} 复制复盘文本</button>
   <button class="btn" onclick="openHistory()">${ic('folder')} 历史对局<small>${loadHist().length} 局</small></button>
   <button class="btn" ${navigator.wakeLock?'':'disabled'} onclick="togWake()">${ic('sun')} 屏幕常亮<small>${!navigator.wakeLock?'此浏览器不支持':!wakeOn?'已关闭':wake?'已开启':'未生效，请关省电模式'}</small></button>
-  <button class="btn" onclick="togDim()" style="grid-column:span 2">${ic('moon')} 夜间调暗、口令大字<small>${dimOn?'已开启':'已关闭'}</small></button>
+  <button class="btn" onclick="togDim()">${ic('moon')} 夜间调暗、口令大字<small>${dimOn?'已开启':'已关闭'}</small></button>
+  <button class="btn" onclick="openBackup()">${ic('save')} 备份与恢复<small>${bkAt()?'上次导出 '+when({end:bkAt()}).slice(5):'从未导出'}</small></button>
+  <button class="btn" ${TTS?'':'disabled'} onclick="togVoice()">${ic('vol')} 口令语音播报<small>${!TTS?'此浏览器不支持':voiceOn?'已开启，换步自动朗读':'已关闭'}</small></button>
+  <button class="btn" ${TTS?'':'disabled'} onclick="voiceRateNext()">${ic('vol')} 播报语速<small>${voiceRate}×</small></button>
   <button class="btn danger" onclick="newGame()" style="grid-column:span 2">${ic('redo')} 新开一局 / 换板子</button></div>${note('版本 '+VER)}`);
 }
 function doUndo(){if(!undo.length)return;const {hide,names,id}=S;S=norm(JSON.parse(undo.pop()));undoDirty='pop';home=false;S.hide=hide;S.names=names;
@@ -1041,8 +1045,74 @@ document.addEventListener('visibilitychange',holdWake);
 document.addEventListener('pointerup',holdWake);
 holdWake();
 
+/* ---------- 备份与恢复 ---------- */
+// 导出的文件保存在本机（下载或“存储到文件”），不上传到任何地方
+const BK='lrs-backup-at',SETK=['lrs-dim','lrs-wake','lrs-voice','lrs-voice-rate'];
+const bkAt=()=>{try{return +localStorage.getItem(BK)||0;}catch(e){return 0;}};
+const bkDue=()=>loadHist().length>=15&&Date.now()-bkAt()>7*864e5;
+function bkData(){const set={};SETK.forEach(k=>{try{const v=localStorage.getItem(k);if(v!==null)set[k]=v;}catch(e){}});
+ return {app:'lrs-werewolf',v:1,ver:VER,at:Date.now(),game:S,history:loadHist(),settings:set};}
+function bkName(){const d=new Date(),p=x=>String(x).padStart(2,'0');return `狼人杀备份-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;}
+async function exportBackup(){
+ const name=bkName(),text=JSON.stringify(bkData()),done=()=>{try{localStorage.setItem(BK,String(Date.now()));}catch(e){}openBackup();toast('已导出：'+name);};
+ // 手机上用系统分享面板（可“存储到文件”），电脑上直接下载
+ try{const f=new File([text],name,{type:'application/json'});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return done();}
+ }catch(e){if(e&&e.name==='AbortError')return;}
+ const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);done();
+}
+function openBackup(){const t=bkAt();
+ sheet(`<h2>${ic('save')} 备份与恢复</h2>${note('对局、历史对局、玩家名字和设置只存在这台设备的浏览器里，清除浏览器数据就没了。导出的备份文件也只存在本机，不会上传。')}
+  ${row('上次导出',t?when({end:t}):'<i>从未导出</i>')}${row('历史对局',loadHist().length+' 局')}
+  <div class="opts" style="margin-top:12px"><button class="btn pri" onclick="exportBackup()">${ic('save')} 导出备份文件</button><button class="btn" onclick="pickBackup()">${ic('folder')} 从文件导入</button></div>
+  ${note('导入：当前对局先存入历史对局，再换成备份里的对局；历史对局按局合并，保留最近 20 局。导入后可用“撤销上一步”回到导入前。')}`);}
+function pickBackup(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';
+ i.onchange=()=>{const f=i.files&&i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>askImport(String(r.result));r.onerror=()=>toast('读取失败');r.readAsText(f);};i.click();}
+function parseBackup(t){try{const d=JSON.parse(t),g=d&&d.game;
+ if(!d||d.app!=='lrs-werewolf'||!g||!Array.isArray(g.seats)||g.seats.length!==12||!BOARDS[g.board]||!Array.isArray(g.log))return null;
+ d.history=(Array.isArray(d.history)?d.history:[]).filter(h=>h&&h.id&&Array.isArray(h.seats)&&Array.isArray(h.log)&&Array.isArray(h.names));return d;}catch(e){return null;}}
+function askImport(t){const d=parseBackup(t);
+ if(!d)return sheet(`<h2>无法导入</h2>${note('这不是本应用导出的备份文件，或者文件已损坏。')}<div class="pkf"><button class="btn" onclick="openBackup()">返回</button></div>`);
+ window._bk=d;const g=d.game;
+ sheet(`<h2>导入这份备份？</h2>${row('导出时间',when({end:d.at}))}${row('对局',`${bdName(g)} · 第${g.day}${g.night?'夜':'天'}`)}${row('历史对局',d.history.length+' 局')}
+  ${note('当前对局会先存入历史对局；导入后可用“撤销上一步”回到导入前。')}<div class="pkf"><button class="btn" onclick="openBackup()">取消</button><button class="btn pri" onclick="doImport()">确认导入</button></div>`);}
+function doImport(){const d=window._bk;if(!d)return;window._bk=null;
+ const {hide}=S;archive();snap();
+ const seen=new Set(),all=[...d.history,...loadHist()].filter(g=>!seen.has(g.id)&&seen.add(g.id)).sort((a,b)=>(b.end||0)-(a.end||0));
+ S=norm(JSON.parse(JSON.stringify(d.game)));S.hide=hide;
+ saveHist(all.filter(g=>g.id!==S.id));
+ Object.entries(d.settings||{}).forEach(([k,v])=>{if(SETK.includes(k)&&typeof v==='string')try{localStorage.setItem(k,v);}catch(e){}});
+ loadPrefs();home=false;close_();settle();toast('已导入备份');}
+
+/* ---------- 口令语音播报 ---------- */
+// 用设备自带的语音（断网可用）；刀口等号码不念，由法官比划
+const TTS=!!(window.speechSynthesis&&window.SpeechSynthesisUtterance),RATES=[.8,1,1.2,1.4];
+let voiceOn=false,voiceRate=1,spoke='',booted=false;
+function loadPrefs(){try{dimOn=localStorage.getItem('lrs-dim')!=='0';wakeOn=localStorage.getItem('lrs-wake')!=='0';voiceOn=localStorage.getItem('lrs-voice')==='1';const r=+localStorage.getItem('lrs-voice-rate');voiceRate=RATES.includes(r)?r:1;}catch(e){}}
+function sayText(){const e=$('.wiz .say');if(!e)return '';const c=e.cloneNode(true);
+ c.querySelectorAll('em.k').forEach(x=>x.textContent='这名');c.querySelectorAll('br').forEach(b=>b.replaceWith('\n'));
+ return c.textContent.replace(/（[^）]*）/g,'').replace(/[“”]/g,'').replace(/……/g,'，').replace(/\s+/g,' ').trim();}
+function speak(){if(!TTS)return;const t=sayText();speechSynthesis.cancel();if(!t)return;
+ const vs=speechSynthesis.getVoices(),v=vs.find(x=>/^zh[-_](CN|Hans)/i.test(x.lang))||vs.find(x=>/^zh/i.test(x.lang)),u=new SpeechSynthesisUtterance(t);
+ u.lang='zh-CN';u.rate=voiceRate;if(v)u.voice=v;window._said=t;speechSynthesis.speak(u);}
+function autoSpeak(){if(home||!S.night)return;const k=S.id+'|'+S.day+'|'+S.n.step;if(k===spoke)return;spoke=k;if(booted&&TTS&&voiceOn)speak();} // 刚打开页面不自动念（浏览器也不允许）
+function togVoice(){voiceOn=!voiceOn;try{localStorage.setItem('lrs-voice',voiceOn?'1':'0');}catch(e){}if(TTS&&!voiceOn)speechSynthesis.cancel();openMenu();if(voiceOn)toast('已开启：每到新的一步自动朗读');}
+function voiceRateNext(){voiceRate=RATES[(RATES.indexOf(voiceRate)+1)%RATES.length];try{localStorage.setItem('lrs-voice-rate',String(voiceRate));}catch(e){}openMenu();}
+
+/* ---------- 西游杀状态面板 ---------- */
+function xyPanel(){const x=XY(),now=k=>S.night?huntRes(k).filter(r=>r.got).map(r=>r.c):[];
+ const line=k=>{const t=x[k],s=one(k),nw=now(k),aw=t.awake||(S.night&&woke(k));
+  return `<div class="xr"><b>${LEAD[k]}${s&&s.dead?'<small>已出局</small>':''}</b>${'ABC'.split('').map(c=>{const on=!!t[c]||nw.includes(c),sub=c==='B'&&t.usedB?'已用':t[c]?`第${t[c]}夜得`:nw.includes(c)?'今晚得':'未得';
+   return `<span class="${on?'on':''} ${c==='B'&&t.usedB?'used':''}">${c} ${TR[k][c]}<small>${sub}</small></span>`;}).join('')}<span class="${aw?'on':''}">觉醒<small>${t.awake?`第${t.awake}夜`:aw?'今晚':'未觉醒'}</small></span></div>`;};
+ const b=x.bound;
+ return `<div class="xyp ${S.hide?'mask':''}"><div class="lbl"><strong>西游状态</strong></div>${line('wukong')}${line('erlang')}
+  <div class="xi"><span>唐僧<small>${x.tang?x.tang+'号':'未定'}</small></span><span>甘露水<small>${x.gyUsed?'已用':'未用'}</small></span><span>收服<small>${b?b+'号'+(seat(b).dead?' 已出局':''):'未用'}</small></span><span>紫霞上次<small>${x.lastZx?x.lastZx+'号':'—'}</small></span></div></div>`;}
+
+loadPrefs();
 home=pristine()&&!S.n.step; // 走过一步就算已开局，刷新后留在对局
 settle(); // 打开旧存档时也整理一次并补判胜负
+booted=true;
 /* ---------- 新版提示 ---------- */
 // 新版下载完先等待，用户点了才启用并刷新；对局已存盘，刷新后接着录
 function updBar(){return newSW?`<div class="winbar upd" onclick="applyUpdate()">${ic('star')} 有新版，点此更新（对局保留）</div>`:'';}

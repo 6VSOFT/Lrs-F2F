@@ -44,6 +44,7 @@ await part('12 板模拟与场景', async () => {
 });
 await reload();
 await part('西游杀', async () => { const r = JSON.parse(await ev(src('xiyou.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('西游杀整局数 ' + r.out.games, r.out.games >= 100, r.out); ok('西游杀覆盖觉醒、击杀、记票', r.out.awake > 0 && r.out.kills > 0 && r.out.votes > 0, r.out); });
+await part('备份、语音、西游面板', async () => { const r = JSON.parse(await ev(src('extra.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('备份等用例数', r.pass >= 35, r.pass); });
 await reload();
 await part('专项探测', async () => { const r = JSON.parse(await ev(src('probe.js'))); r.forEach(x => ok(x, x.startsWith('PASS'))); ok('探测数', r.length >= 16, r.length); });
 await reload();
