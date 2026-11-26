@@ -933,7 +933,7 @@ function openHistory(){
 }
 function openHist(id){
  const g=hist(id);if(!g)return openHistory();
- sheet(`<h2 class="lh"><span>${ic('folder')} ${bdName(g)}</span><button class="btn pri" onclick="copyLog('${id}')">${ic('copy')} 复制</button></h2>${note(when(g))}${g.win?`<div class="winbar ${g.win.side}" style="margin-top:8px;cursor:default">${ic('cup')} ${winText(g.win)}</div>`:''}${rosterHTML(g,false)}${logHTML(g)}
+ sheet(`<h2 class="lh"><span>${ic('folder')} ${bdName(g)}</span><span class="hb"><button class="btn" onclick="exportGameXlsx('${id}')">${ic('save')} 导出 Excel</button><button class="btn pri" onclick="copyLog('${id}')">${ic('copy')} 复制</button></span></h2>${note(when(g))}${g.win?`<div class="winbar ${g.win.side}" style="margin-top:8px;cursor:default">${ic('cup')} ${winText(g.win)}</div>`:''}${rosterHTML(g,false)}${logHTML(g)}
   <div class="pkf"><button class="btn" onclick="openHistory()">← 返回</button><button class="btn" onclick="makeImage('${id}')">${ic('pic')} 长图</button><button class="btn danger" onclick="askDelHist('${id}')">删除这一局</button></div>`);
 }
 function askDelHist(id){const g=hist(id);if(!g)return;sheet(`<h2>删除这一局？</h2>${note(`${bdName(g)} · ${when(g)}，删除后无法恢复。`)}<div class="pkf"><button class="btn" onclick="openHist('${id}')">取消</button><button class="btn danger" onclick="delHist('${id}')">确认删除</button></div>`);}
@@ -943,7 +943,7 @@ function delHist(id){saveHist(loadHist().filter(g=>g.id!==id));openHistory();toa
 // 记录顶部：12 位玩家的身份与状态（隐藏模式下不显示身份）
 function rosterHTML(g=S,hide=S.hide){return `<div class="ros">${g.seats.map(s=>{const r=s.role&&R[s.role];
  return `<div class="${s.dead?'out ':''}${r&&!hide?r.c:''}"><b>${s.n}</b>${r&&!hide?`<img src="img/${pic(r.k,g.board)}.png" alt="">`:''}<span>${hide?'???':r?r.n:'未录入'}${s.badge?' '+ic('badge')+'':''}${g.names[s.n-1]?`<em>${g.names[s.n-1]}</em>`:''}${s.dead?`<small class="${s.dead}">${s.at}${CAUSE[s.dead]}</small>`:''}</span></div>`;}).join('')}</div>`;}
-function openLog(){sheet(`<h2 class="lh"><span>${ic('log')} 对局记录</span><button class="btn pri" onclick="copyLog()">${ic('copy')} 复制</button></h2>${winBar()}<button class="btn pk1" onclick="askImage()">${ic('pic')} 生成复盘长图</button>${S.hide?'<button class="btn pk1" data-peek>'+ic('eye')+' 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
+function openLog(){sheet(`<h2 class="lh"><span>${ic('log')} 对局记录</span><span class="hb"><button class="btn" onclick="exportGameXlsx()">${ic('save')} 导出 Excel</button><button class="btn pri" onclick="copyLog()">${ic('copy')} 复制</button></span></h2>${winBar()}<button class="btn pk1" onclick="askImage()">${ic('pic')} 生成复盘长图</button>${S.hide?'<button class="btn pk1" data-peek>'+ic('eye')+' 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
 // 记录里的“｜”换行显示
 const logLine=x=>x.split('｜').join('<br>').replace(/🎖/g,ic('badge')).replace(/🏆/g,ic('cup'));
 // 记录按“第N夜 / 第N天”分段；号码加粗，身份按阵营上色，死亡、查验、警徽等按类别标色
@@ -1256,8 +1256,8 @@ function statsOf(gs){const fin=gs.filter(g=>g.win&&g.win.side),good=fin.filter(g
  fin.forEach(g=>skillOf(g,P));
  return {gs,fin,good,wolf:fin.length-good,by,P};}
 // 从对局记录算玩家表现：神民的警长票、放逐票；狼人的夜刀、白天放逐
-// 警徽票正确率：神民投的警长票里，投给神民阵营的比例；投狼正确率：神民投的放逐票里，投给狼人的比例
-// 屠神率：狼人在场的夜里，狼刀刀中神职的比例；抗推率：狼人在场的白天，放逐出局的是好人的比例
+// 警徽率：神民投的警长票里，投给神民阵营的比例；投狼率：神民投的放逐票里，投给狼人的比例（不论是否放逐成功）
+// 屠神率：狼人在场的夜里，狼刀刀中神职的比例；抗推率：狼人在场的白天，实际放逐出局的是好人的比例
 const phaseKey=t=>{const m=String(t).match(/第(\d+)(夜|天)/);return m?m[1]*2-(m[2]==='夜'?1:0):0;};
 function skillOf(g,P){
  const who=n=>P[cleanName(String(g.names[n-1]||''))],st=n=>g.seats[n-1],on=(s,p)=>!s.dead||phaseKey(s.at)>=p,isGod=s=>!!(s&&s.role&&R[s.role]&&R[s.role].c==='god');
@@ -1273,13 +1273,13 @@ function skillOf(g,P){
   if(/^更正：取消/.test(l.x)&&/的放逐|无人放逐/.test(l.x))delete ex[p];});
  Object.entries(ex).forEach(([p,n])=>{const t=st(n);if(t&&t.role)wolvesAt(+p).filter(s=>s.n!==n).forEach(s=>{const q=who(s.n);if(q){q.xn++;if(sideOf(t)==='good')q.xg++;}});});}
 function openStats(){const t=statsOf(statGames());
- sheet(`<h2>${ic('chart')} 对局统计</h2>${t.gs.length?`
+ sheet(`<h2 class="lh"><span>${ic('chart')} 对局统计</span>${t.gs.length?`<button class="btn pri" onclick="exportXlsx()">${ic('save')} 导出 Excel</button>`:''}</h2>${t.gs.length?`
   <div class="sx"><span><b>${t.gs.length}</b>局</span><span><b>${t.fin.length}</b>已分胜负</span><span class="g"><b>${pct(t.good,t.fin.length)}</b>好人胜</span><span class="w"><b>${pct(t.wolf,t.fin.length)}</b>狼人胜</span><span><b>${avgDay(t.fin)}</b>平均天数</span></div>${bar2(t.good,t.wolf)}
   <div class="lbl"><strong>各板子</strong>绿色好人胜，红色狼人胜</div>
   <div class="st2">${Object.entries(t.by).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const f=a.filter(g=>g.win&&g.win.side),g=f.filter(x=>x.win.side==='good').length;
    return `<div><b>${bdName({board:k})}</b><small>${a.length} 局 · 好人 ${g} 胜 · 狼人 ${f.length-g} 胜 · 平均 ${avgDay(f)} 天</small>${bar2(g,f.length-g)}</div>`;}).join('')}</div>
   <div class="lbl"><strong>玩家</strong>按名字统计已分胜负的对局</div>
-  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return `<div class="pl"><b>${n}<small>${p.n} 局</small></b><div class="pr"><span><b>${pct(p.w,p.n)}</b>总胜率<small>${p.w}/${p.n}</small></span><span class="g"><b>${pct(gw,gn)}</b>神民胜率<small>${gw}/${gn}</small></span><span class="w"><b>${pct(p.ww,p.wolf)}</b>狼人胜率<small>${p.ww}/${p.wolf}</small></span></div>${gn?`<div class="pr2 g"><i>神民</i><span><b>${pct(p.sg,p.sv)}</b>警徽票正确率<small>${p.sg}/${p.sv}</small></span><span><b>${pct(p.ew,p.ev)}</b>投狼正确率<small>${p.ew}/${p.ev}</small></span></div>`:''}${p.wolf?`<div class="pr2 w"><i>狼人</i><span><b>${pct(p.kg,p.kn)}</b>屠神率<small>${p.kg}/${p.kn}</small></span><span><b>${pct(p.xg,p.xn)}</b>抗推率<small>${p.xg}/${p.xn}</small></span></div>`:''}</div>`;}).join('')}</div>${note('警徽票正确率：当神民时投的警长票，投给神民阵营的比例。投狼正确率：当神民时投的放逐票，投给狼人的比例（需用“记票”记录）。屠神率：当狼人时，狼刀刀中神职的比例。抗推率：当狼人时，白天放逐出局的是好人的比例。')}`:note('录了玩家名字的对局才会统计到人。')}`
+  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return `<div class="pl"><b>${n}<small>${p.n} 局</small></b><div class="pr"><span><b>${pct(p.w,p.n)}</b>总胜率<small>${p.w}/${p.n}</small></span><span class="g"><b>${pct(gw,gn)}</b>神民胜率<small>${gw}/${gn}</small></span><span class="w"><b>${pct(p.ww,p.wolf)}</b>狼人胜率<small>${p.ww}/${p.wolf}</small></span></div>${gn?`<div class="pr2 g"><i>神民</i><span><b>${pct(p.sg,p.sv)}</b>警徽率<small>${p.sg}/${p.sv}</small></span><span><b>${pct(p.ew,p.ev)}</b>投狼率<small>${p.ew}/${p.ev}</small></span></div>`:''}${p.wolf?`<div class="pr2 w"><i>狼人</i><span><b>${pct(p.kg,p.kn)}</b>屠神率<small>${p.kg}/${p.kn}</small></span><span><b>${pct(p.xg,p.xn)}</b>抗推率<small>${p.xg}/${p.xn}</small></span></div>`:''}</div>`;}).join('')}</div>${note('警徽率：当神民时投的警长票，投给神民阵营的比例。投狼率：当神民时投的放逐票，投给狼人的比例；好人是闭眼视角，投给狼人即算，不论最后是否放逐成功（需用“记票”记录）。屠神率：当狼人时，狼刀刀中神职的比例。抗推率：当狼人时，白天实际放逐出局的是好人的比例；狼人是睁眼视角，只算成功放逐。')}`:note('录了玩家名字的对局才会统计到人。')}`
   :note('还没有对局。新开一局时，上一局会存入历史对局并计入统计。')}${note(`统计本机保存的最近 ${HMAX} 局历史对局${S.log.length?'和当前对局':''}，不上传。`)}
   <div class="pkf"><button class="btn" onclick="openHistory()">← 历史对局</button></div>`);}
 
@@ -1361,6 +1361,74 @@ function pubSync(e){if(!SCREEN)return;
  if(e.key==='lrs-timer'){try{const a=JSON.parse(e.newValue);if(Array.isArray(a))a.slice(0,2).forEach((t,i)=>{if(t&&TDS.includes(t.dur))tms[i]={dur:t.dur,left:+t.left||0,end:+t.end||0};});}catch(x){}}}
 addEventListener('storage',pubSync);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pubOn&&!SCREEN)pubExit();});
+
+/* ---------- 导出 Excel ---------- */
+// 在本机生成标准 .xlsx（不压缩的 zip），不依赖外部库，不上传
+const CRCT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRCT[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+function zipStore(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+ const u16=v=>[v&255,(v>>>8)&255],u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+ files.forEach(([name,text])=>{const nb=enc.encode(name),db=enc.encode(text),c=crc32(db);
+  const head=[...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0)];
+  parts.push(new Uint8Array(head),nb,db);
+  cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+  off+=head.length+nb.length+db.length;});
+ const cl=cen.reduce((a,b)=>a+b.length,0);
+ return new Blob([...parts,...cen,new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cl),...u32(off),...u16(0)])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
+const xesc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+const xcol=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+// 单元格：数字、文字；{p:比例} 显示成百分比；表头加粗
+function xSheet(rows,widths){
+ const cell=(v,r,c)=>{const ref=xcol(c)+(r+1);if(v===null||v===undefined||v==='')return '';
+  if(v&&typeof v==='object'&&'p' in v)return v.p===null?'':`<c r="${ref}" s="2"><v>${v.p}</v></c>`;
+  if(typeof v==='number'&&isFinite(v))return `<c r="${ref}"${r===0?' s="1"':''}><v>${v}</v></c>`;
+  return `<c r="${ref}" t="inlineStr"${r===0?' s="1"':''}><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;};
+ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`+
+  (widths?`<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>`:'')+
+  `<sheetData>${rows.map((row,r)=>`<row r="${r+1}">${row.map((v,c)=>cell(v,r,c)).join('')}</row>`).join('')}</sheetData></worksheet>`;}
+function xlsxBlob(sheets){
+ const ws=sheets.map((s,i)=>[`xl/worksheets/sheet${i+1}.xml`,xSheet(s.rows,s.w)]);
+ return zipStore([
+  ['[Content_Types].xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${ws.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+  ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+  ['xl/workbook.xml',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${xesc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`],
+  ['xl/_rels/workbook.xml.rels',`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+  ['xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
+  ...ws]);}
+const rate=(a,b)=>({p:b?Math.round(a*1000/b)/1000:null});
+function statSheets(t){
+ const side=g=>g.win&&g.win.side?(g.win.side==='good'?'好人胜':'狼人胜'):'未分胜负';
+ return [
+  {name:'总览',w:[16,12],rows:[['项目','数值'],['对局数',t.gs.length],['已分胜负',t.fin.length],['好人胜',t.good],['狼人胜',t.wolf],['好人胜率',rate(t.good,t.fin.length)],['狼人胜率',rate(t.wolf,t.fin.length)],['平均天数',t.fin.length?+avgDay(t.fin):''],['导出时间',when({end:Date.now()})]]},
+  {name:'各板子',w:[20,8,10,8,8,10,10],rows:[['板子','局数','已分胜负','好人胜','狼人胜','好人胜率','平均天数'],...Object.entries(t.by).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const f=a.filter(g=>g.win&&g.win.side),g=f.filter(x=>x.win.side==='good').length;return [bdName({board:k}),a.length,f.length,g,f.length-g,rate(g,f.length),f.length?+avgDay(f):''];})]},
+  {name:'玩家',w:[12,6,6,8,8,8,10,8,8,10,8,10,8,8,8,8,8,10,8,8,10,8],rows:[['玩家','局数','胜','总胜率','神民局','神民胜','神民胜率','狼人局','狼人胜','狼人胜率','警长票','投给神民','警徽率','放逐票','投给狼人','投狼率','狼刀','刀中神职','屠神率','放逐','放逐好人','抗推率'],
+   ...Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return [n,p.n,p.w,rate(p.w,p.n),gn,gw,rate(gw,gn),p.wolf,p.ww,rate(p.ww,p.wolf),p.sv,p.sg,rate(p.sg,p.sv),p.ev,p.ew,rate(p.ew,p.ev),p.kn,p.kg,rate(p.kg,p.kn),p.xn,p.xg,rate(p.xg,p.xn)];})]},
+  {name:'对局',w:[17,18,6,10,...Array(12).fill(18)],rows:[['结束时间','板子','天数','结果',...Array.from({length:12},(_,i)=>`${i+1}号`)],
+   ...t.gs.map(g=>[when({end:g.end||Date.now()}),bdName(g),+g.day||'',side(g),...g.seats.map(s=>[cleanName(String(g.names[s.n-1]||'')),s.role&&R[s.role]?R[s.role].n:'未录入',s.dead?`${s.at}${CAUSE[s.dead]||''}`:'存活'].filter(Boolean).join(' '))])]},
+ ];}
+const xlsxName=()=>{const d=new Date(),p=x=>String(x).padStart(2,'0');return `狼人杀统计-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.xlsx`;};
+// 单局导出：玩家、过程、投票三张表
+const CAMPN={god:'神职',villager:'平民',wolf:'狼人'};
+function gameSheets(g){
+ const votes=[];g.log.forEach(l=>{const m=l.x.match(/^(放逐投票|警长投票)(（PK）)?：([\s\S]*)$/);if(!m)return;
+  m[3].split('｜').forEach(t=>{const a=t.match(/^(\d+)号 ([\d.]+)票（(.*)）$/),b=t.match(/^弃票 (.*)$/);
+   if(a)votes.push([l.t,m[1],m[2]?'PK':'第一轮',+a[1],+a[2],a[3].replace(/\u{1F396}/gu,'(警长)')]);else if(b)votes.push([l.t,m[1],m[2]?'PK':'第一轮','弃票','',b[1]]);});});
+ return [
+  {name:'玩家',w:[6,12,12,10,8,20],rows:[['号码','名字','身份','阵营','警长','结局'],...g.seats.map(s=>{const r=s.role&&R[s.role];return [s.n,cleanName(String(g.names[s.n-1]||'')),r?r.n:'未录入',r?CAMPN[r.c]:'',s.badge?'警长':'',s.dead?`${s.at}${CAUSE[s.dead]||''}`:'存活'];}),
+   [],['板子',bdName(g)],['结果',g.win&&g.win.side?winText(g.win):'未分胜负'],['天数',+g.day||'']]},
+  {name:'过程',w:[8,14,60],rows:[['时间','事项','内容'],...g.log.filter(l=>!/^—— 天[亮黑] ——$/.test(l.x)).map(l=>{const x=l.x.replace(/\u{1F396}/gu,'(警长)').replace(/\u{1F3C6}\s*/gu,''),m=x.match(/^([^：｜\d]{1,8})：([\s\S]*)$/);return [l.t,m?m[1]:'',(m?m[2]:x).split('｜').join('；')];})]},
+  {name:'投票',w:[8,10,8,8,8,30],rows:[['时间','类型','轮次','被投','票数','投票人'],...votes]},
+ ];}
+async function saveXlsx(name,blob){window._xlsx={name,blob};
+ try{const f=new File([blob],name,{type:blob.type});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return toast('已导出：'+name);}
+ }catch(e){if(e&&e.name==='AbortError')return;}
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);toast('已导出：'+name);}
+async function exportGameXlsx(id){const g=id?hist(id):S;if(!g)return;if(!g.log.length)return toast('还没有记录');
+ const d=new Date(g.end||Date.now()),p=x=>String(x).padStart(2,'0');
+ await saveXlsx(`狼人杀对局-${bdName(g)}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.xlsx`,xlsxBlob(gameSheets(g)));}
+async function exportXlsx(){const t=statsOf(statGames());if(!t.gs.length)return toast('还没有对局');
+ await saveXlsx(xlsxName(),xlsxBlob(statSheets(t)));}
 
 loadPrefs();
 home=pristine()&&!S.n.step; // 走过一步就算已开局，刷新后留在对局
