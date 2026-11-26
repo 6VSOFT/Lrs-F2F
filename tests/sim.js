@@ -245,7 +245,7 @@ startGame('std');openNames(2);const ins=document.querySelectorAll('.nms input');
 S.seats[2].role='wolf';S.seats[2].dead=null;doBadge(2);ok('name in log',S.log.at(-1).x==='警徽授予 3号 小明b');doUndo();ok('name kept on undo',S.names[2]==='小明b');startGame('demon');ok('name kept on new game',S.names[11]==='阿强');pickT('guard');ok('name in picker',pkb(12).textContent.includes('阿强'));close_();
 openNames();B('清空全部').click();saveNames();ok('names cleared',S.names.every(x=>!x));
 // board chooser
-newGame();ok('12 boards listed',document.querySelectorAll('#sheet .bd').length===12);close_();
+newGame();ok('boards listed',document.querySelectorAll('#sheet .bd').length===Object.keys(BOARDS).length);close_();
 for(const b of Object.keys(BOARDS)){startGame(b);pickRole(0);ok('imgs '+b,document.querySelectorAll('.rp img').length===Object.keys(BOARDS[b].cnt).length);}close_();
 // hide: no role names in seats
 setup('demon',['seer','witch','hunter','guard','demon','wolf','wolf','wolf','villager','villager','villager','villager']);S.hide=true;render();ok('hide uniform',new Set([...document.querySelectorAll('.seat')].map(e=>getComputedStyle(e).borderTopColor)).size===1);tapSeat(4);ok('hide sheet',!document.querySelector('#sheet').textContent.includes('恶魔'));close_();S.hide=false;

@@ -15,14 +15,14 @@ await part('静态检查', async () => {
   const a = app.match(/const VER='(v\d+)'/)?.[1], b = sw.match(/werewolf-judge-(v\d+)/)?.[1];
   ok('app.js 与 sw.js 版本号一致', a && a === b, [a, b]);
   const imgs = fs.readdirSync(path.join(APP, 'img')).map(f => f.replace('.png', '')), list = sw.match(/\.\.\.'([^']+)'/)[1].split(' ');
-  ok('离线清单包含全部角色图', imgs.length === 24 && imgs.every(k => list.includes(k)) && list.length === imgs.length, imgs.filter(k => !list.includes(k)));
+  ok('离线清单包含全部角色图', imgs.length >= 31 && imgs.every(k => list.includes(k)) && list.length === imgs.length, imgs.filter(k => !list.includes(k)));
   JSON.parse(fs.readFileSync(path.join(APP, 'manifest.webmanifest'), 'utf8')); ok('manifest 可解析', true);
 });
 
 const srv = await serve(), B = await browser(); const {ev, size, reload, cdp} = B;
 await size(375, 812); await B.go(srv.url, 3500);
 await part('首页选板子', async () => {
-  ok('首次打开是选板子', await ev("home&&document.querySelectorAll('.home .bd').length===12&&!document.querySelector('.seat')&&!document.querySelector('.stats')"));
+  ok('首次打开是选板子', await ev("home&&document.querySelectorAll('.home .bd').length===Object.keys(BOARDS).length&&!document.querySelector('.seat')&&!document.querySelector('.stats')"));
   ok('首页不调暗', !await ev("document.documentElement.classList.contains('dim')"));
   for (const [w, h] of [[320, 568], [375, 812], [768, 1024], [1280, 800], [1920, 1080]]) { await size(w, h); await sleep(120); ok('首页宽度 ' + w, await ev("document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.home button')].every(b=>b.scrollWidth<=b.clientWidth+1&&b.offsetHeight>=44)")); }
   await size(375, 812); const tapB = async n => { const [x, y] = await ev(rect(`[...document.querySelectorAll('.home .bd')].find(b=>b.firstChild.textContent==='${n}')`)); await B.mouse('mousePressed', x, y); await B.mouse('mouseReleased', x, y); await sleep(200); };
@@ -34,7 +34,7 @@ await part('首页选板子', async () => {
 });
 await part('安装与缓存', async () => {
   ok('SW 已启用', await ev("Promise.race([navigator.serviceWorker.ready.then(r=>r.active.state),new Promise(r=>setTimeout(()=>r('timeout'),5000))])") === 'activated');
-  ok('缓存 30 个文件', (await ev("caches.keys().then(async k=>(await (await caches.open(k[0])).keys()).length)")) === 30);
+  ok('缓存全部文件', (await ev("caches.keys().then(async k=>(await (await caches.open(k[0])).keys()).length)")) === 6 + fs.readdirSync(path.join(APP, 'img')).length);
   const e = (await cdp('Page.getInstallabilityErrors')).result?.installabilityErrors; ok('可安装', e && e.length === 0, e);
 });
 await part('12 板模拟与场景', async () => {
@@ -42,6 +42,8 @@ await part('12 板模拟与场景', async () => {
   for (const [k, v] of Object.entries(r.out)) if (k !== '_w') ok('模拟 ' + k + ' ' + v, / nights ok$/.test(v));
   ok('12 个板子都跑到', Object.keys(r.out).filter(k => k !== '_w').length === 12); ok('场景数不少于 200', r.pass >= 200, r.pass);
 });
+await reload();
+await part('西游杀', async () => { const r = JSON.parse(await ev(src('xiyou.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('西游杀整局数 ' + r.out.games, r.out.games >= 100, r.out); ok('西游杀覆盖觉醒、击杀、记票', r.out.awake > 0 && r.out.kills > 0 && r.out.votes > 0, r.out); });
 await reload();
 await part('专项探测', async () => { const r = JSON.parse(await ev(src('probe.js'))); r.forEach(x => ok(x, x.startsWith('PASS'))); ok('探测数', r.length >= 16, r.length); });
 await reload();
@@ -132,7 +134,7 @@ await part('旧存档与断网', async () => {
   await ev(`(()=>{const o=JSON.parse(localStorage.getItem(KEY));for(const k of ['id','out','v','elLater','board','police','names','lastGuard','lucky','mech','mechUsed','awakeDay','sealed','d','badgeDone','badgeLost'])delete o[k];o.n={step:5,knife:1,anti:false,poison:null,check:null};o.model=2;o.log=[];'hybrid,wolf,wolf,wolf,wolf,seer,hunter,idiot,witch,villager,villager,villager'.split(',').forEach((k,i)=>{o.seats[i].role=k;o.seats[i].dead=null;});o.day=2;o.night=false;o.seats[0].dead=o.seats[5].dead='night';addEventListener('beforeunload',()=>localStorage.setItem(KEY,JSON.stringify(o)));})()`);
   await reload(); ok('旧存档可读', await ev("S.board==='hybrid'&&S.day===2&&S.seats[0].role==='hybrid'&&[...document.querySelectorAll('.st b')].map(e=>e.textContent).join()==='4,3,3,10'"));
   await ev('doExile(2);close_()'); await srv.stop(); await reload(2500);
-  ok('断网可打开', await ev("S.seats[1].dead==='exile'&&document.querySelectorAll('.seat').length===12")); ok('断网 24 图', await ev("Promise.all(ROLES.map(r=>fetch('img/'+r.k+'.png').then(x=>x.ok,()=>false))).then(a=>a.filter(Boolean).length)") === 24);
+  ok('断网可打开', await ev("S.seats[1].dead==='exile'&&document.querySelectorAll('.seat').length===12")); ok('断网全部角色图', await ev("Promise.all([...ROLES.map(r=>r.k),'villager-xy'].map(k=>fetch('img/'+k+'.png').then(x=>x.ok,()=>false))).then(a=>a.filter(Boolean).length)") === 31);
   await ev('nextNight()'); ok('断网可继续', await ev('S.day===3&&S.night'));
 });
 ok('无脚本错误', !B.errs.length, B.errs); await B.close();
