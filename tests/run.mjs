@@ -45,6 +45,7 @@ await part('12 板模拟与场景', async () => {
 await reload();
 await part('西游杀', async () => { const r = JSON.parse(await ev(src('xiyou.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('西游杀整局数 ' + r.out.games, r.out.games >= 100, r.out); ok('西游杀覆盖觉醒、击杀、记票', r.out.awake > 0 && r.out.kills > 0 && r.out.votes > 0, r.out); });
 await part('备份、语音、西游面板', async () => { const r = JSON.parse(await ev(src('extra.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('备份等用例数', r.pass >= 35, r.pass); });
+await part('假面舞会', async () => { const r = JSON.parse(await ev(src('masq.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('假面舞会用例数', r.pass >= 40, r.pass); });
 await part('发言顺序、速查、统计、长图、大屏', async () => { const r = JSON.parse(await ev(src('more.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('新功能用例数', r.pass >= 45, r.pass); });
 await reload();
 await part('专项探测', async () => { const r = JSON.parse(await ev(src('probe.js'))); r.forEach(x => ok(x, x.startsWith('PASS'))); ok('探测数', r.length >= 16, r.length); });
@@ -136,7 +137,7 @@ await part('旧存档与断网', async () => {
   await ev(`(()=>{const o=JSON.parse(localStorage.getItem(KEY));for(const k of ['id','out','v','elLater','board','police','names','lastGuard','lucky','mech','mechUsed','awakeDay','sealed','d','badgeDone','badgeLost'])delete o[k];o.n={step:5,knife:1,anti:false,poison:null,check:null};o.model=2;o.log=[];'hybrid,wolf,wolf,wolf,wolf,seer,hunter,idiot,witch,villager,villager,villager'.split(',').forEach((k,i)=>{o.seats[i].role=k;o.seats[i].dead=null;});o.day=2;o.night=false;o.seats[0].dead=o.seats[5].dead='night';addEventListener('beforeunload',()=>localStorage.setItem(KEY,JSON.stringify(o)));})()`);
   await reload(); ok('旧存档可读', await ev("S.board==='hybrid'&&S.day===2&&S.seats[0].role==='hybrid'&&[...document.querySelectorAll('.st b')].map(e=>e.textContent).join()==='4,3,3,10'"));
   await ev('doExile(2);close_()'); await srv.stop(); await reload(2500);
-  ok('断网可打开', await ev("S.seats[1].dead==='exile'&&document.querySelectorAll('.seat').length===12")); ok('断网全部角色图', await ev("Promise.all([...ROLES.map(r=>r.k),'villager-xy'].map(k=>fetch('img/'+k+'.png').then(x=>x.ok,()=>false))).then(a=>a.filter(Boolean).length)") === 31);
+  ok('断网可打开', await ev("S.seats[1].dead==='exile'&&document.querySelectorAll('.seat').length===12")); ok('断网全部角色图', await ev("Promise.all([...ROLES.map(r=>r.k),'villager-xy'].map(k=>fetch('img/'+k+'.png').then(x=>x.ok,()=>false))).then(a=>a.filter(Boolean).length)") === fs.readdirSync(path.join(APP, 'img')).length);
   await ev('nextNight()'); ok('断网可继续', await ev('S.day===3&&S.night'));
 });
 await part('大屏新窗口', async () => {

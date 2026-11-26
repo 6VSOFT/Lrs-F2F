@@ -1,4 +1,4 @@
-const VER='v37'; // 与 sw.js 的版本号一致
+const VER='v38'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -16,7 +16,7 @@ const ROLES=[
  ['hybrid','混血儿','villager'],['villager','平民','villager'],
  ['wolf','狼人','wolf'],['wolfking','狼王','wolf'],['demon','恶魔','wolf'],['beauty','狼美人','wolf'],['elder','狼兄','wolf'],['younger','狼弟','wolf'],
  ['gargoyle','石像鬼','wolf'],['mechwolf','机械狼','wolf'],['nightmare','噩梦之影','wolf'],['bloodmoon','血月使徒','wolf'],
- ['wukong','孙悟空','god'],['zixia','紫霞仙子','god'],['guanyin','观音','god'],['heixiong','黑熊精','god'],['erlang','二郎神','wolf'],['tianbing','天兵','wolf']].map(([k,n,c])=>({k,n,c}));
+ ['dancer','舞者','god'],['mask','假面','wolf'],['wukong','孙悟空','god'],['zixia','紫霞仙子','god'],['guanyin','观音','god'],['heixiong','黑熊精','god'],['erlang','二郎神','wolf'],['tianbing','天兵','wolf']].map(([k,n,c])=>({k,n,c}));
 const R=Object.fromEntries(ROLES.map(r=>[r.k,r]));
 // cnt：各身份张数（合计 12）；pack：首夜一起睁眼的狼；mark：在狼人环节里单独确认的特殊狼
 // n1 / n2：首夜 / 第 2 夜起的流程
@@ -48,6 +48,8 @@ const BOARDS={
  blood:{name:'血月使徒猎魔人',desc:'预女猎魔白 + 4民 + 3狼 + 血月',cnt:{seer:1,witch:1,witchhunter:1,idiot:1,villager:4,wolf:3,bloodmoon:1},pack:['wolf','bloodmoon'],mark:'bloodmoon',
   n1:'close wolf witch seer witchhunter idiot dawn',n2:'close wolf witch seer witchhunter dawn'},
  // 西游杀：两位领袖每晚“寻宝”，集齐三件宝物觉醒；离孙悟空最近的平民是唐僧（本人不知道）
+ masq:{name:'假面舞会',desc:'预女舞白 + 4民 + 3狼 + 假面',cnt:{seer:1,witch:1,dancer:1,idiot:1,villager:4,wolf:3,mask:1},pack:['wolf'],
+  n1:'close wolf witch seer dancerId maskId idiot dawn',n2:'close dancer wolf mask witch seer dawn'},
  xiyou:{name:'西游杀',desc:'悟空紫霞观音黑熊 + 4民 + 二郎神 + 3天兵',cnt:{wukong:1,zixia:1,guanyin:1,heixiong:1,villager:4,erlang:1,tianbing:3},pack:['tianbing'],wn:'天兵',
   ids:['zixia','erlang','wukong','tianbing','guanyin','heixiong'],
   n1:'close ids zixia erlang wukong wolf guanyin heixiong dawn',n2:'close zixia erlang wukong wolf guanyin heixiong dawn'}};
@@ -59,13 +61,13 @@ const SKILL={check:'查验',poison:'毒药',gun:'猎枪'};
 const KEY='lrs-werewolf-v2';
 const freshNight=()=>({step:0,guard:null,dream:null,fear:null,swap:null,knife:null,anti:false,poison:null,check:null,gcheck:null,dcheck:null,
  charm:null,hunt:null,bknife:null,trade:null,lcheck:null,lpoison:null,learn:null,mcheck:null,mpoison:null,mguard:null,mknife:null,
- zx:null,wkT:[],elT:[],wkB:null,elB:null,wkC:null,elC:null,wkA:null,elA:null,gyS:false,gyB:null});
+ dance:[],mkQ:null,mkM:null,zx:null,wkT:[],elT:[],wkB:null,elB:null,wkC:null,elC:null,wkA:null,elA:null,gyS:false,gyB:null});
 // 西游杀的跨夜状态：宝物记为获得的夜数（0=没有），awake 觉醒的夜数
 const freshXY=()=>({wukong:{A:0,B:0,C:0,usedB:false,awake:0},erlang:{A:0,B:0,C:0,usedB:false,awake:0},lastZx:0,bound:0,tang:0,gyUsed:false});
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 // police 上警；out 退水；elLater 竞选延到第 2 天；v 记票草稿 {kind,round,c:PK 候选,m:{投票人:被投}}
 const fresh=(board='hybrid')=>({id:newId(),board,out:[],elLater:false,v:null,names:Array(12).fill(''),police:[],day:1,night:true,hide:false,model:null,used:{anti:false,poison:false},
- lastGuard:0,lastDream:0,lastCharm:0,charmed:0,lastExile:0,swapped:[],traded:null,lucky:null,mech:null,mechUsed:{poison:false,guard:false},awakeDay:null,sealed:0,knightUsed:false,badgeDone:false,badgeLost:false,xy:freshXY(),
+ lastGuard:0,lastDream:0,lastCharm:0,charmed:0,lastExile:0,swapped:[],danced:[],lastMask:0,traded:null,lucky:null,mech:null,mechUsed:{poison:false,guard:false},awakeDay:null,sealed:0,knightUsed:false,badgeDone:false,badgeLost:false,xy:freshXY(),
  n:freshNight(),d:null,talk:null,win:null,seats:Array.from({length:12},(_,i)=>({n:i+1,role:null,dead:null,at:'',badge:false,flip:false})),log:[]});
 // 补齐旧存档、旧撤销记录缺少的字段
 function norm(s){
@@ -199,13 +201,15 @@ function resolve(){
   if(seat(x).role==='demon'){if(!N.includes('恶魔夜间免死。'))N.push('恶魔夜间免死。');return;} // 刀、毒等夜间伤害都无效
   C[x]=c;
  };
+ const dz=one('dancer'),pool=n.dance||[],dImm=!!(dz&&pool.includes(dz.n)); // 舞者在舞池：舞池 3 人免疫狼刀
  const safe=x=>n.dream===x||n.mguard===x;
  const K=S.board==='xiyou'?0:mg(n.knife||0),P=mg(n.poison||0),bk=n.bknife||0; // 西游杀的刀口在 xyResolve 里结算
- [P,n.lpoison].forEach(x=>{if(!x||safe(x))return;if(seat(x).role==='witchhunter')N.push('猎魔人免疫毒药。');else die(x,'poison');});
+ [P,n.lpoison].forEach(x=>{if(!x||safe(x))return;if(seat(x).role==='witchhunter')N.push('猎魔人免疫毒药。');else if(['dancer','mask'].includes(seat(x).role))N.push(`${R[seat(x).role].n}免疫毒药。`);else die(x,'poison');});
  if(n.mpoison&&n.dream!==n.mpoison)die(n.mpoison,'poison'); // 机械狼的毒穿盾
  if(K&&bk===K){if(!safe(K))die(K,'knife');N.push(`${K}号 同时被狼队和狼弟袭击，解药与守护无效。`);}
  else{
-  if(K&&!safe(K)){const g=n.guard===K;if(g===!!n.anti)die(K,'knife');if(g&&n.anti)N.push(`${K}号 同守同救，死亡。`);}
+  if(K&&dImm&&pool.includes(K))N.push(`${K}号 在舞池（舞者共舞），免疫狼刀。`);
+  else if(K&&!safe(K)){const g=n.guard===K;if(g===!!n.anti)die(K,'knife');if(g&&n.anti)N.push(`${K}号 同守同救，死亡。`);}
   if(bk&&!safe(bk)&&n.guard!==bk)die(bk,'knife');
  }
  if(n.mknife&&!safe(n.mknife)&&n.guard!==n.mknife)die(n.mknife,'knife');
@@ -213,6 +217,7 @@ function resolve(){
  if(n.trade&&isWolf(seat(n.trade.n))){const m=one('merchant');die(m&&m.n,'trade');N.push('黑市商人与狼人交易，黑市商人死亡。');}
  if(n.dream&&n.dream===S.lastDream){die(n.dream,'dream');N.push(`${n.dream}号 连续两夜被摄梦，死亡。`);}
  if(S.board==='xiyou')xyResolve(die,C,N);
+ {const r=danceOut();if(r&&r.out){die(r.out,'dance');N.push(`舞池结算：好人 ${r.g.length}、狼人 ${r.w.length}，${r.out}号 出局（解药救不了）。`);}}
  for(let i=0;i<2;i++){
   const d=one('dreamer'),b=one('beauty');
   if(d&&C[d.n]&&n.dream&&!C[n.dream]&&!seat(n.dream).dead){die(n.dream,'dream');N.push(`摄梦人死亡，梦游者 ${n.dream}号 一同死亡。`);}
@@ -466,6 +471,14 @@ const STEPS={
    if(ok2&&lu.skill==='poison')x+=tgt('毒药','lpoison',{none:'不使用'});
    if(ok2&&lu.skill==='gun')x+=note('猎枪在白天使用：天亮后在白天面板点“开枪”。');}
   return {t:'幸运儿',say:S.day===1?'“被拍到的玩家是幸运儿。”<br>（绕场一圈，交易成功则轻拍幸运儿）':'“幸运儿请睁眼，是否使用技能？”<br>“幸运儿请闭眼。”',body:x||note('没有幸运儿：空喊流程。')};},
+ dancerId:()=>({t:'舞者',say:'“舞者请睁眼，请确认你的身份。”<br>“舞者请闭眼。”',body:idRow('dancer')+note('舞者从第 2 夜起每晚选 3 人共舞（可以选自己），每人整局只进一次舞池。'),ok:!!one('dancer')}),
+ maskId:()=>({t:'假面',say:'“假面请睁眼，请确认你的身份。”<br>“假面请闭眼。”',body:idRow('mask')+note('假面不与狼队相认，从第 2 夜起行动；普通狼人全部出局后带刀。'),ok:!!one('mask')}),
+ dancer:()=>{const b=blocked('dancer'),el=danceable(),d=S.n.dance||[];return {t:'舞者',say:eye('dancer')+'今晚你要和哪三位玩家共舞？”<br>（比划三个号码，可以包括自己）'+shut('dancer'),
+  body:blkNote('dancer')+(b?'':el.length<3?note(`可进舞池的玩家不足 3 人（${el.length} 人），今晚技能失效。`):row('共舞',d.length?d.join('、')+'号':'<i>未选</i>','选择','pickDance()')+(d.length===3?danceRes():''))+
+   note(`每人整局只进一次舞池${S.danced.length?`（已进过：${S.danced.join('、')}号）`:''}。天亮时舞池里人数少的阵营出局（3 人同阵营则无事），解药救不了；舞者在舞池时，舞池 3 人免疫狼刀。舞者、假面免疫毒药。`),ok:!!b||el.length<3||d.length===3};},
+ mask:()=>{const b=blocked('mask'),q=S.n.mkQ,d=S.n.dance||[];return {t:'假面',say:eye('mask')+'你要询问谁是否在舞池？”<br>（法官手势告知：大拇指=在，摇手=不在）<br>“你要给谁戴上面具？”<br>（比划号码；不戴请摇手）'+shut('mask'),
+  body:blkNote('mask')+(b?'':tgt('询问','mkQ')+(q?res(!d.includes(q),`${lab(q)}：${d.includes(q)?'在舞池 · 大拇指':'不在舞池 · 摇手'}`):'')+tgt('面具','mkM',{none:'不戴'})+(S.n.mkM&&d.length===3?danceRes():''))+
+   note(`面具改变戴面具者在共舞计数里的阵营（只在他当晚进舞池时生效），可以给自己；不能连续两晚给同一人${S.lastMask?`（昨晚：${S.lastMask}号）`:''}。`),ok:!!b||(q!==null&&S.n.mkM!==null)};},
  sheriff:()=>({t:'警长',say:'“要竞选警长的玩家请举手。”<br>（记录上警号码）<br>“请放下。”',body:row('上警',S.police.length?S.police.join('、')+'号':'<i>未录入</i>','选择','pickPolice()')+note('可不录入，天亮后在白天面板继续：退水、投票、当选。')}),
  ...XYSTEPS,
  ids:()=>{const bd=BD(),wn=bd.wn||'狼人',pk=k=>bd.pack.includes(k),ws=S.seats.filter(s=>pk(s.role)).map(s=>s.n),wt=packWant(),t=S.board==='xiyou'&&XY().tang,nv=cntOf('villager');
@@ -518,7 +531,8 @@ const TG={
  wkB:['定海神针击谁？',s=>alive(s)&&notMe(s,'wukong'),'不使用'],elB:['三尖两刃刀击谁？',s=>alive(s)&&notMe(s,'erlang'),'不使用'],
  wkC:['镇魔圈护谁？（含左右）',()=>true,'不使用'],elC:['哮天犬封印谁？',s=>alive(s)&&notMe(s,'wukong')&&notMe(s,'erlang'),'不使用'],
  wkA:['齐天大圣查验谁？',s=>alive(s)&&notMe(s,'wukong')],elA:['二郎神查验谁？',s=>alive(s)&&notMe(s,'erlang')],
- lcheck:['幸运儿查验谁？',s=>alive(s)&&s.n!==S.lucky.n,'不使用'],lpoison:['幸运儿毒谁？',alive,'不使用']};
+ lcheck:['幸运儿查验谁？',s=>alive(s)&&s.n!==S.lucky.n,'不使用'],lpoison:['幸运儿毒谁？',alive,'不使用'],
+ mkQ:['假面询问谁在不在舞池？',s=>alive(s)&&notMe(s,'mask')],mkM:['假面给谁戴面具？',s=>alive(s)&&s.n!==S.lastMask,'不戴']};
 function pickT(f){
  const [t,ok,none]=TG[f];
  seatPicker(typeof t==='function'?t():t,{ok,none:none?{label:none,value:f==='poison'?null:0}:null,done:v=>upd(()=>{const pf=packFeared();S.n[f]=v;if(f==='knife')S.n.anti=false;if(pf&&!packFeared())S.n.knife=null;})});
@@ -530,6 +544,14 @@ function pickOne(k){
  seatPicker(`${R[k].n}是几号？`,{ok:s=>inner?s.role==='wolf'||s.role===k:free(s,k),done:n=>upd(()=>{
   S.seats.forEach(s=>{if(s.role===k)s.role=inner?'wolf':null;});seat(n).role=k;if(S.model===n&&k==='hybrid')S.model=null;})});
 }
+// 舞者共舞：活着、整局没进过舞池的玩家里选 3 人
+const danceable=()=>S.seats.filter(s=>alive(s)&&!S.danced.includes(s.n)).map(s=>s.n);
+function pickDance(){seatPicker('舞者与哪三位共舞？',{multi:true,max:3,min:3,sel:S.n.dance||[],ok:s=>danceable().includes(s.n),done:l=>upd(()=>S.n.dance=l)});}
+// 共舞计数：狼人阵营与好人阵营，戴面具者阵营反转；少数方出局
+function danceOut(){const n=S.n,d=n.dance||[];if(d.length!==3)return null;
+ const camp=x=>{const w=isWolf(seat(x));return n.mkM===x?!w:w;},w=d.filter(camp),g=d.filter(x=>!camp(x));
+ return {w,g,out:w.length===1?w[0]:g.length===1?g[0]:0};}
+function danceRes(){const r=danceOut();if(!r)return '';return r.out?res(0,`共舞：好人 ${r.g.length}、狼人 ${r.w.length}${S.n.mkM&&(S.n.dance||[]).includes(S.n.mkM)?`（${S.n.mkM}号戴面具，阵营反转）`:''} → 天亮 ${lab(r.out)} 出局`):res(1,'共舞 3 人同阵营：无事发生');}
 function pickModel(){seatPicker('榜样是几号？',{ok:s=>notMe(s,'hybrid'),done:n=>upd(()=>S.model=n)});}
 function pickWolves(){
  const pk=BD().pack,mine=s=>!!s.role&&pk.includes(s.role),extra=pk.filter(k=>k!=='wolf').map(k=>R[k].n).join('、');
@@ -551,7 +573,7 @@ function confirmDawn(){
  commit('',()=>{
   const n=S.n,r=resolve(),who=k=>one(k)&&!one(k).dead,idn=k=>seatsOf(k).map(s=>s.n).join('、')||'—';
   if(S.day===1){
-   L('身份：'+['zixia','tianbing','erlang','wukong','guanyin','heixiong','hybrid','magician','merchant','dreamer','guard','nightmare','wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','bloodmoon','witch','seer','medium','hunter','witchhunter','idiot','knight','grave']
+   L('身份：'+['zixia','tianbing','erlang','wukong','guanyin','heixiong','hybrid','magician','merchant','dreamer','guard','nightmare','wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','bloodmoon','mask','witch','seer','medium','hunter','witchhunter','dancer','idiot','knight','grave']
     .filter(cntOf).map(k=>`${R[k].n}${idn(k)}号${k==='hybrid'?`（榜样${S.model||'—'}号）`:''}`).join('｜')+(S.board==='xiyou'&&XY().tang?`｜唐僧${XY().tang}号（平民）`:''));
   }
   const say2=(k,f,verb,none)=>{if(who(k))L(`${R[k].n}：${blocked(k)?'技能被封':n[f]>0?`${verb} ${n[f]}号`:none}`);};
@@ -570,6 +592,8 @@ function confirmDawn(){
   if(n.gcheck)L(`石像鬼查验：${n.gcheck}号 → ${exactName(seat(n.gcheck))}`);
   if(n.dcheck){const t=seat(n.dcheck);L(`恶魔查验：${n.dcheck}号 → ${t.role&&R[t.role].c==='god'?'神职':'非神职'}`);}
   if(n.hunt)L(`猎魔人：狩猎 ${n.hunt}号`);
+  if(who('dancer')||(n.dance||[]).length)L(`舞者：${blocked('dancer')?'技能被封':(n.dance||[]).length?`共舞 ${n.dance.join('、')}号`:'未共舞'}`);
+  if(cntOf('mask')&&S.day>1&&one('mask')&&!one('mask').dead)L(`假面：${n.mkQ?`询问 ${n.mkQ}号（${(n.dance||[]).includes(n.mkQ)?'在':'不在'}舞池）`:'未询问'}｜${n.mkM?`面具 ${n.mkM}号`:'不戴面具'}`);
   if(n.lcheck)L(`幸运儿查验：${n.lcheck}号 → ${seerWolf(seat(n.lcheck))?'狼人':'好人'}`);if(n.lpoison)L(`幸运儿：毒 ${n.lpoison}号`);
   if(S.board==='xiyou')xyDawnLog();
   r.N.forEach(x=>L(x.replace(/。$/,'')));
@@ -581,6 +605,7 @@ function confirmDawn(){
   if(awakeTonight())S.awakeDay=S.day;
   S.lastGuard=n.guard>0?n.guard:0;S.lastDream=n.dream||0;S.lastCharm=n.charm||0;S.charmed=n.charm||0;
   if(n.swap)S.swapped.push(...n.swap);
+  if((n.dance||[]).length)S.danced.push(...n.dance);if(cntOf('mask'))S.lastMask=n.mkM||0;
   if(n.trade){S.traded={...n.trade,day:S.day};if(!isWolf(seat(n.trade.n)))S.lucky={...n.trade,day:S.day,used:false};}
   if(S.lucky&&(n.lcheck||n.lpoison))S.lucky.used=true;
   if(n.learn>0&&!S.mech)S.mech={n:n.learn,role:seat(n.learn).role,day:S.day};
@@ -810,7 +835,7 @@ function sync(){
 }
 // 改选身份后，清掉因此变得不合规则的夜间录入
 const ACT={zixia:['zx'],guanyin:['gyS','gyB'],seer:['check'],medium:['check'],witch:['anti','poison'],guard:['guard'],dreamer:['dream'],magician:['swap'],merchant:['trade'],beauty:['charm'],demon:['dcheck'],gargoyle:['gcheck'],
- witchhunter:['hunt'],younger:['bknife'],mechwolf:['learn','mcheck','mpoison','mguard','mknife'],nightmare:['fear']};
+ witchhunter:['hunt'],younger:['bknife'],mechwolf:['learn','mcheck','mpoison','mguard','mknife'],nightmare:['fear'],dancer:['dance'],mask:['mkQ','mkM']};
 function enforce(){
  if(!S.night)return;
  const n=S.n,w=one('witch'),F=freshNight();
@@ -818,6 +843,8 @@ function enforce(){
  // 目标已被标记出局的录入作废（刀口按空刀）
  for(const f of Object.keys(TG))if(f!=='wkC'&&n[f]>0&&seat(n[f]).dead)n[f]=f==='knife'?0:F[f]; // 镇魔圈中心可以是死者（占位）
  if(n.swap&&n.swap.some(x=>seat(x).dead))n.swap=F.swap;
+ if((n.dance||[]).some(x=>seat(x).dead||S.danced.includes(x)))n.dance=[];
+ if(n.mkQ&&one('mask')&&n.mkQ===one('mask').n)n.mkQ=null;
  if(n.trade&&seat(n.trade.n).dead)n.trade=null;
  if(packFeared())n.knife=0;
  if(n.anti&&(!(n.knife>0)||n.poison||(w&&w.n===n.knife)))n.anti=false;
@@ -862,7 +889,7 @@ function seatHTML(s){
  if(S.night){
   if(n.swap&&n.swap.includes(s.n))nt('p','换');if(n.fear===s.n)nt('p','惧');if(n.dream===s.n)nt('g','梦');if(n.guard===s.n||n.mguard===s.n)nt('g','守');
   if(n.knife===s.n)nt('k',n.anti?'刀·救':'刀口');if(n.bknife===s.n||n.mknife===s.n)nt('k','刀');if(n.charm===s.n)nt('p','魅');
-  if([n.poison,n.lpoison,n.mpoison].includes(s.n))nt('p','毒');if(n.elC===s.n)nt('p','封');if(n.wkB===s.n||n.elB===s.n)nt('k','击');if(n.gyB===s.n)nt('p','收');if(n.zx===s.n)nt('g','霞');if((n.wkT||[]).includes(s.n)||(n.elT||[]).includes(s.n))nt('c','宝');if(n.hunt===s.n)nt('k','猎');if([n.check,n.gcheck,n.dcheck,n.lcheck,n.mcheck].includes(s.n))nt('c','验');
+  if([n.poison,n.lpoison,n.mpoison].includes(s.n))nt('p','毒');if(n.elC===s.n)nt('p','封');if(n.wkB===s.n||n.elB===s.n)nt('k','击');if(n.gyB===s.n)nt('p','收');if(n.zx===s.n)nt('g','霞');if((n.wkT||[]).includes(s.n)||(n.elT||[]).includes(s.n))nt('c','宝');if((n.dance||[]).includes(s.n))nt('g','舞');if(n.mkM===s.n)nt('p','面');if(n.hunt===s.n)nt('k','猎');if([n.check,n.gcheck,n.dcheck,n.lcheck,n.mcheck].includes(s.n))nt('c','验');
  }
  return `<div class="seat ${r?r.c:''} ${s.dead?'dead':''}" role="button" tabindex="0" aria-label="${lab(s.n)}${s.dead?'，'+CAUSE[s.dead]:''}" onclick="tapSeat(${s.n-1})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();tapSeat(${s.n-1})}">
   <span class="no">${s.n}</span><div class="tags">${tags.join('')}</div>
@@ -1238,7 +1265,9 @@ const RI={seer:'每晚查验一名玩家：好人还是狼人。',
  guanyin:'甘露水整局一次，救当晚的刀口（不能自救）；整局只能收服一人，被收服者投票跟观音，观音出局时一同殉情。',
  heixiong:'每晚得知左右两侧最近的存活玩家里有没有狼；唐僧在旁边时结果反转。',
  erlang:'天庭领袖。每晚点人寻宝（点到狼人得 A、神职得 B、平民得 C）：A 天眼（觉醒后查验身份）、B 三尖两刃刀（击杀孙悟空，一次）、C 哮天犬（每晚封印一人技能）。集齐三件当夜觉醒，下一夜起和天兵一起刀人。',
- tianbing:'天庭阵营，每晚一起刀一名玩家。不能自爆。'};
+ tianbing:'天庭阵营，每晚一起刀一名玩家。不能自爆。',
+ dancer:'从第 2 夜起每晚选 3 人共舞（可以选自己），每人整局只进一次舞池。天亮时舞池里人数少的阵营出局（3 人同阵营则无事），解药救不了；舞者在舞池时，舞池 3 人免疫狼刀。免疫女巫毒药。',
+ mask:'狼人，不与狼队相认。从第 2 夜起，先询问一名玩家是否在舞池，再可给一人戴面具，使其在共舞计数里阵营反转（可以给自己，不能连续两晚同一人）。免疫女巫毒药；普通狼人全部出局后带刀。'};
 const CAMP={god:'神职',villager:'平民阵营',wolf:'狼人阵营'};
 const roleInfo=(k,b=S.board)=>b==='xiyou'&&k==='villager'?RI.villagerXY:RI[k]||'';
 function openGuide(b=S.board){const bd=BOARDS[b]||BD();
