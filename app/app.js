@@ -1,7 +1,7 @@
-const VER='v33'; // 与 sw.js 的版本号一致
+const VER='v34'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
-const IC={vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
+const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
  more:'M5 12h.01M12 12h.01M19 12h.01',badge:'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.500-.8Z',vote:'M4 11h16v9H4ZM8 11V4h8v7M9.500 15.500h5',moon:'M20 14.500A8.500 8.500 0 0 1 9.500 4 8.500 8.500 0 1 0 20 14.500Z',
  gun:'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM12 2v5M12 17v5M2 12h5M17 12h5',redo:'M4 12a8 8 0 1 0 2.600-5.900L4 8.500M4 4v4.500h4.500',edit:'M4 20l1-4.500L16 4.500l3.500 3.500L8.500 19ZM14 6.500l3.500 3.500',tag:'M4 4h8l8 8-8 8-8-8ZM8 8h.01',
  undo:'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',log:'M6 3h12v18H6ZM9.500 8h5M9.500 12h5M9.500 16h3',copy:'M9 9h11v11H9ZM5 15H4V4h11v1',folder:'M3 6h6l2 2h10v11H3Z',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.400 1.400M17.600 17.600L19 19M5 19l1.400-1.400M17.600 6.400L19 5',
@@ -66,7 +66,7 @@ const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 // police 上警；out 退水；elLater 竞选延到第 2 天；v 记票草稿 {kind,round,c:PK 候选,m:{投票人:被投}}
 const fresh=(board='hybrid')=>({id:newId(),board,out:[],elLater:false,v:null,names:Array(12).fill(''),police:[],day:1,night:true,hide:false,model:null,used:{anti:false,poison:false},
  lastGuard:0,lastDream:0,lastCharm:0,charmed:0,lastExile:0,swapped:[],traded:null,lucky:null,mech:null,mechUsed:{poison:false,guard:false},awakeDay:null,sealed:0,knightUsed:false,badgeDone:false,badgeLost:false,xy:freshXY(),
- n:freshNight(),d:null,win:null,seats:Array.from({length:12},(_,i)=>({n:i+1,role:null,dead:null,at:'',badge:false,flip:false})),log:[]});
+ n:freshNight(),d:null,talk:null,win:null,seats:Array.from({length:12},(_,i)=>({n:i+1,role:null,dead:null,at:'',badge:false,flip:false})),log:[]});
 // 补齐旧存档、旧撤销记录缺少的字段
 function norm(s){
   const o=Object.assign(fresh(),s);o.n=Object.assign(freshNight(),s.n);
@@ -594,7 +594,7 @@ function confirmDawn(){
 }
 function nextNight(){
  if(!S.d)return toast('请先完成今天的投票放逐');
- commit('',()=>{S.lastExile=S.d.n||0;S.v=null;tmReset();S.day++;S.night=true;S.n=freshNight();S.d=null;L('—— 天黑 ——');});
+ commit('',()=>{S.lastExile=S.d.n||0;S.v=null;tmReset();S.day++;S.night=true;S.n=freshNight();S.d=null;S.talk=null;L('—— 天黑 ——');});
 }
 
 /* ---------- 白天流程：每天放逐 1 人 ---------- */
@@ -628,7 +628,7 @@ function dayPanel(){
  const ex=S.seats.find(x=>x.badge&&x.dead);
  if(ex)body+=note(''+ic('badge')+' 警长已出局，请移交或撕毁警徽。')+row('警徽',lab(ex.n),'处理','passBadge()');
  return `<div class="wiz"><div class="wh"><span class="lbl"><small>白天</small><b>${label()}</b></span></div>
-  ${body}${timerHTML()}
+  ${body}${talkBox()}${timerHTML()}
   <div class="wf"><button class="btn pri" ${d?'':'disabled'} onclick="adv(nextNight)">天黑了 →</button></div></div>`;
 }
 // 狼美人白天出局：带走被魅惑者（决斗除外）
@@ -826,9 +826,11 @@ let home=false;
 function homeHTML(){
  const nm=S.names.filter(x=>x).length;
  return `<main class="home" id="top" tabindex="-1">${updBar()}<h2>选择板子</h2><p>选好后直接进入第 1 夜。</p><div class="bds">${boardsHTML()}</div>
-  <div class="opts"><button class="btn" onclick="openNames()">${ic('tag')} 玩家名字<small>${nm?`已录 ${nm}/12`:'可不录'}</small></button><button class="btn" onclick="openHistory()">${ic('folder')} 历史对局<small>${loadHist().length} 局</small></button></div></main>`;
+  <div class="opts"><button class="btn" onclick="openNames()">${ic('tag')} 玩家名字<small>${nm?`已录 ${nm}/12`:'可不录'}</small></button><button class="btn" onclick="openHistory()">${ic('folder')} 历史对局<small>${loadHist().length} 局</small></button><button class="btn" onclick="openGuide('hybrid')">${ic('book')} 身份速查<small>各板技能说明</small></button><button class="btn" onclick="openStats()">${ic('chart')} 对局统计<small>胜率、玩家</small></button></div></main>`;
 }
 function render(){
+ if(pubOn)return pubRender();
+ document.documentElement.classList.remove('pubm');
  let h=`<header><a class="skip-link" href="#top">跳到内容</a><h1>狼人杀法官记录<small>${home?`12 人板，${Object.keys(BOARDS).length} 个板子`:`${BD().name}，${BD().desc}`}</small></h1>
   ${home?'':`${S.hide?`<button class="ib" data-peek title="按住查看">按住看</button>`:''}<button class="ib ${S.hide?'on':''}" onclick="togHide()" title="${S.hide?'显示身份':'隐藏身份'}" aria-label="${S.hide?'显示身份':'隐藏身份'}">${ic(S.hide?'eyeoff':'eye')}</button>`}
   <button class="ib" onclick="openMenu()" title="菜单" aria-label="菜单">${ic('more')}<span class="sr">⋯</span></button></header>`;
@@ -851,6 +853,7 @@ function seatHTML(s){
  if(S.board==='xiyou'){const x=XY();if(x.tang===s.n)tags.push('<span class="tag mdl">唐僧</span>');if(x.bound===s.n&&!s.dead)tags.push('<span class="tag mdl">被收服</span>');if(s.role==='wukong'||s.role==='erlang'){const t=x[s.role],h='ABC'.split('').filter(c=>t[c]);if(h.length)tags.push(`<span class="tag mdl">${t.awake?'觉醒':'宝 '+h.join('')}</span>`);}}
  if(S.lucky&&S.lucky.n===s.n)tags.push(`<span class="tag mdl">幸运儿·${SKILL[S.lucky.skill]}</span>`);
  if((S.day===1||electing())&&S.police.includes(s.n))tags.push(`<span class="tag pol">${S.out.includes(s.n)?'退水':'上警'}</span>`);
+ if(!S.night&&talkCur()===s.n)tags.push('<span class="tag spk2">发言</span>');
  if(!S.night&&S.charmed===s.n&&one('beauty')&&!one('beauty').dead&&!s.dead)tags.push('<span class="tag mdl">被魅惑</span>');
  if(S.night){
   if(n.swap&&n.swap.includes(s.n))nt('p','换');if(n.fear===s.n)nt('p','惧');if(n.dream===s.n)nt('g','梦');if(n.guard===s.n||n.mguard===s.n)nt('g','守');
@@ -865,7 +868,7 @@ function seatHTML(s){
 }
 function tapSeat(i){
  const s=S.seats[i],r=s.role&&R[s.role];
- let o=`<h2>${r&&!S.hide?`<img src="img/${pic(r.k)}.png" alt="">`:''}${lab(s.n)}${S.hide?'':` · ${r?r.n:'未录入'}`}</h2><div class="opts">`;
+ let o=`<h2>${r&&!S.hide?`<img src="img/${pic(r.k)}.png" alt="">`:''}${lab(s.n)}${S.hide?'':` · ${r?r.n:'未录入'}`}</h2>${r&&!S.hide?note(roleInfo(r.k)):''}<div class="opts">`;
  o+=`<button class="btn ${s.badge?'act':''}" onclick="doBadge(${i})">${ic('badge')} ${s.badge?'撤销警徽':'警徽'}<small>${s.badge?'当前持有':S.badgeLost?'警徽已流失':'授予/移交'}</small></button>`;
  if(!s.dead){
   o+=`<button class="btn danger" ${S.night||S.d?'disabled':''} onclick="doExile(${s.n})">${ic('vote')} 放逐出局<small>${S.night?'仅白天':S.d?'今天已放逐':!S.hide&&s.role==='idiot'&&!s.flip?'白痴翻牌，视为出局':'白天投票'}</small></button>`;
@@ -925,12 +928,12 @@ function archive(){
 }
 function openHistory(){
  const a=loadHist();
- sheet(`<h2>${ic('folder')} 历史对局</h2>${bkDue()?`<div class="res bad">${ic('warn')} 已存 ${a.length} 局，${bkAt()?'超过 7 天':'还从来'}没有导出备份。<button class="btn" onclick="openBackup()">去备份</button></div>`:''}${a.length?`<div class="hs">${a.map(g=>`<button class="btn" onclick="openHist('${g.id}')"><b>${bdName(g)}</b><small>${when(g)} · ${g.day} 天</small><small class="${g.win?g.win.side:''}">${g.win?winText(g.win):'未分胜负'}</small></button>`).join('')}</div>`:note('还没有历史对局。新开一局时，上一局会自动存到这里。')}${note(`最多保留最近 ${HMAX} 局，只存在本机。`)}`);
+ sheet(`<h2>${ic('folder')} 历史对局</h2><button class="btn pk1" onclick="openStats()">${ic('chart')} 对局统计</button>${bkDue()?`<div class="res bad">${ic('warn')} 已存 ${a.length} 局，${bkAt()?'超过 7 天':'还从来'}没有导出备份。<button class="btn" onclick="openBackup()">去备份</button></div>`:''}${a.length?`<div class="hs">${a.map(g=>`<button class="btn" onclick="openHist('${g.id}')"><b>${bdName(g)}</b><small>${when(g)} · ${g.day} 天</small><small class="${g.win?g.win.side:''}">${g.win?winText(g.win):'未分胜负'}</small></button>`).join('')}</div>`:note('还没有历史对局。新开一局时，上一局会自动存到这里。')}${note(`最多保留最近 ${HMAX} 局，只存在本机。`)}`);
 }
 function openHist(id){
  const g=hist(id);if(!g)return openHistory();
  sheet(`<h2 class="lh"><span>${ic('folder')} ${bdName(g)}</span><button class="btn pri" onclick="copyLog('${id}')">${ic('copy')} 复制</button></h2>${note(when(g))}${g.win?`<div class="winbar ${g.win.side}" style="margin-top:8px;cursor:default">${ic('cup')} ${winText(g.win)}</div>`:''}${rosterHTML(g,false)}${logHTML(g)}
-  <div class="pkf"><button class="btn" onclick="openHistory()">← 返回</button><button class="btn danger" onclick="askDelHist('${id}')">删除这一局</button></div>`);
+  <div class="pkf"><button class="btn" onclick="openHistory()">← 返回</button><button class="btn" onclick="makeImage('${id}')">${ic('pic')} 长图</button><button class="btn danger" onclick="askDelHist('${id}')">删除这一局</button></div>`);
 }
 function askDelHist(id){const g=hist(id);if(!g)return;sheet(`<h2>删除这一局？</h2>${note(`${bdName(g)} · ${when(g)}，删除后无法恢复。`)}<div class="pkf"><button class="btn" onclick="openHist('${id}')">取消</button><button class="btn danger" onclick="delHist('${id}')">确认删除</button></div>`);}
 function delHist(id){saveHist(loadHist().filter(g=>g.id!==id));openHistory();toast('已删除');}
@@ -939,7 +942,7 @@ function delHist(id){saveHist(loadHist().filter(g=>g.id!==id));openHistory();toa
 // 记录顶部：12 位玩家的身份与状态（隐藏模式下不显示身份）
 function rosterHTML(g=S,hide=S.hide){return `<div class="ros">${g.seats.map(s=>{const r=s.role&&R[s.role];
  return `<div class="${s.dead?'out ':''}${r&&!hide?r.c:''}"><b>${s.n}</b>${r&&!hide?`<img src="img/${pic(r.k,g.board)}.png" alt="">`:''}<span>${hide?'???':r?r.n:'未录入'}${s.badge?' '+ic('badge')+'':''}${g.names[s.n-1]?`<em>${g.names[s.n-1]}</em>`:''}${s.dead?`<small class="${s.dead}">${s.at}${CAUSE[s.dead]}</small>`:''}</span></div>`;}).join('')}</div>`;}
-function openLog(){sheet(`<h2 class="lh"><span>${ic('log')} 对局记录</span><button class="btn pri" onclick="copyLog()">${ic('copy')} 复制</button></h2>${winBar()}${S.hide?'<button class="btn pk1" data-peek>'+ic('eye')+' 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
+function openLog(){sheet(`<h2 class="lh"><span>${ic('log')} 对局记录</span><button class="btn pri" onclick="copyLog()">${ic('copy')} 复制</button></h2>${winBar()}<button class="btn pk1" onclick="askImage()">${ic('pic')} 生成复盘长图</button>${S.hide?'<button class="btn pk1" data-peek>'+ic('eye')+' 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
 // 记录里的“｜”换行显示
 const logLine=x=>x.split('｜').join('<br>').replace(/🎖/g,ic('badge')).replace(/🏆/g,ic('cup'));
 function logHTML(g=S){return `<ul class="log">${g.log.length?g.log.map(l=>`<li><i>${l.t}</i><span>${logLine(l.x)}</span></li>`).join(''):'<li>暂无记录</li>'}</ul>`;}
@@ -955,6 +958,10 @@ function openMenu(){
   <button class="btn" onclick="openBackup()">${ic('save')} 备份与恢复<small>${bkAt()?'上次导出 '+when({end:bkAt()}).slice(5):'从未导出'}</small></button>
   <button class="btn" ${TTS?'':'disabled'} onclick="togVoice()">${ic('vol')} 口令语音播报<small>${!TTS?'此浏览器不支持':voiceOn?'已开启，换步自动朗读':'已关闭'}</small></button>
   <button class="btn" ${TTS?'':'disabled'} onclick="voiceRateNext()">${ic('vol')} 播报语速<small>${voiceRate}×</small></button>
+  <button class="btn" onclick="openGuide()">${ic('book')} 身份速查<small>本板技能说明</small></button>
+  <button class="btn" onclick="openStats()">${ic('chart')} 对局统计<small>胜率、玩家</small></button>
+  <button class="btn" onclick="askImage()">${ic('pic')} 复盘长图<small>生成图片分享</small></button>
+  <button class="btn" onclick="openPub()">${ic('tv')} 大屏公开模式<small>给玩家看，不显示身份</small></button>
   <button class="btn danger" onclick="newGame()" style="grid-column:span 2">${ic('redo')} 新开一局 / 换板子</button></div>${note('版本 '+VER)}`);
 }
 function doUndo(){if(!undo.length)return;const {hide,names,id}=S;S=norm(JSON.parse(undo.pop()));undoDirty='pop';home=false;S.hide=hide;S.names=names;
@@ -1001,6 +1008,8 @@ function tmTick(){
  const e=$('#tm'+i);if(e){e.querySelector('b').textContent=tmText(l);e.classList.toggle('low',l<=1e4);}
 }
 function tmGo(i){
+ if(!S.night&&tmLeft(tms[i])<=0&&talkCur()){tmLast=i;return talkStep(1);} // 时间到点“下一位”：换到下一个发言人
+ tmLast=i;
  try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();}catch(e){} // 手机须在点击时启用声音
  const t=tms[i],l=tmLeft(t),go=!(t.end&&l>0);
  tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});
@@ -1132,9 +1141,194 @@ function xyPanel(){const x=XY(),now=k=>S.night?huntRes(k).filter(r=>r.got).map(r
  return `<div class="xyp ${S.hide?'mask':''}"><div class="lbl"><strong>西游状态</strong></div>${line('wukong')}${line('erlang')}
   <div class="xi"><span>唐僧<small>${x.tang?x.tang+'号':'未定'}</small></span><span>甘露水<small>${x.gyUsed?'已用':'未用'}</small></span><span>收服<small>${b?b+'号'+(seat(b).dead?' 已出局':''):'未用'}</small></span><span>紫霞上次<small>${x.lastZx?x.lastZx+'号':'—'}</small></span></div></div>`;}
 
+/* ---------- 发言顺序 ---------- */
+// S.talk：{k:'day' 白天 | 'police' 警上, dir:1 号码递增 | -1 递减, st:起点, last:警长最后发言, o:顺序, i:当前第几位, day}
+let tmLast=0; // 最近用的计时器：换下一位时重新开始它
+const talkPool=k=>(k==='police'?runners():S.seats.filter(s=>!s.dead).map(s=>s.n)).sort((a,b)=>a-b);
+const chief=()=>{const c=S.seats.find(s=>s.badge&&!s.dead);return c?c.n:0;};
+const talkChief=d=>d.k==='day'&&d.last?chief():0;
+// 从 st 起按方向排一圈；st 不在名单里时，从它下一个（按方向）开始
+function talkFrom(a,st,dir){if(!a.length)return [];let i=a.indexOf(st);
+ if(i<0){i=dir>0?a.findIndex(x=>x>st):a.length-1-[...a].reverse().findIndex(x=>x<st);if(i<0||i>=a.length)i=dir>0?0:a.length-1;}
+ return a.map((_,k)=>a[((i+dir*k)%a.length+a.length)%a.length]);}
+function talkOrder(d){const a=talkPool(d.k),c=talkChief(d),b=a.filter(x=>x!==c);return c&&a.includes(c)?[...talkFrom(b,d.st,d.dir),c]:talkFrom(a,d.st,d.dir);}
+const talkOn=()=>!S.night&&!!S.talk&&S.talk.day===S.day&&S.talk.o.length>0;
+const talkGone=n=>S.talk.k==='police'?!present(seat(n)):!!seat(n).dead;
+const talkCur=()=>talkOn()&&S.talk.i<S.talk.o.length?S.talk.o[S.talk.i]:0;
+const talkNext=()=>{if(!talkOn())return 0;const t=S.talk;for(let j=t.i+1;j<t.o.length;j++)if(!talkGone(t.o[j]))return t.o[j];return 0;};
+function talkDefault(){const d=window._tk,c=talkChief(d),a=talkPool(d.k).filter(x=>x!==c);
+ d.st=c?(d.dir>0?a.find(x=>x>c)||a[0]:[...a].reverse().find(x=>x<c)||a.at(-1))||0:a.includes(d.st)?d.st:a[0]||0;}
+function openTalk(){const t=S.talk&&S.talk.day===S.day?S.talk:null,pol=electing()&&runners().length>0;
+ window._tk={k:t&&(t.k==='day'||pol)?t.k:pol?'police':'day',dir:t?t.dir:1,st:t?t.st:0,last:t?t.last:true};
+ if(!t||!talkPool(window._tk.k).includes(window._tk.st))talkDefault();drawTalk();}
+function drawTalk(keep){const d=window._tk,c=talkChief(d),cc=d.k==='day'?chief():0,o=talkOrder(d),pol=electing()&&runners().length>0;
+ sheet(`<h2>${ic('talk')} 发言顺序</h2>
+  <div class="seg">${pol?`<button class="btn ${d.k==='police'?'act':''}" onclick="talkSet('k','police')">警上发言</button>`:''}<button class="btn ${d.k==='day'?'act':''}" onclick="talkSet('k','day')">${pol?'全体发言':'白天发言'}</button></div>
+  <div class="seg"><button class="btn ${d.dir>0?'act':''}" onclick="talkSet('dir',1)">号码递增 →</button><button class="btn ${d.dir<0?'act':''}" onclick="talkSet('dir',-1)">← 号码递减</button></div>
+  ${cc?`<div class="seg"><button class="btn ${d.last?'act':''}" onclick="talkSet('last',${!d.last})">${d.last?ic('ok')+' ':''}警长 ${cc}号 最后发言（归票）</button></div>`:''}
+  <div class="lbl"><strong>起点</strong>点号码选第一个发言的人</div>
+  <div class="pk">${talkPool(d.k).filter(n=>n!==c).map(n=>`<button class="${n===d.st?'cur':''}" onclick="talkSet('st',${n})"><b>${n}</b><small>${S.names[n-1]||'&nbsp;'}</small></button>`).join('')}</div>
+  <button class="btn" style="width:100%;margin-top:8px" onclick="talkRand()">随机起点</button>
+  <div class="lbl"><strong>顺序</strong>${o.length} 人</div><div class="tko">${o.map(n=>`<span>${n}</span>`).join('')||'<i>没有可发言的玩家</i>'}</div>
+  <div class="pkf"><button class="btn" onclick="close_()">取消</button><button class="btn pri" ${o.length?'':'disabled'} onclick="talkGo()">开始发言</button></div>`,keep);}
+function talkSet(f,v){const d=window._tk;d[f]=v;if(f==='k'||f==='last'||(f==='dir'&&talkChief(d)))talkDefault();drawTalk(true);}
+function talkRand(){const d=window._tk,c=talkChief(d),a=talkPool(d.k).filter(x=>x!==c);if(a.length)d.st=a[Math.floor(Math.random()*a.length)];drawTalk(true);}
+function talkGo(){const d=window._tk,o=talkOrder(d);if(!o.length)return;S.talk={...d,o,i:0,day:S.day};close_();save();tmReset(tmLast);tmGo(tmLast);render();toast(`${o[0]}号 先发言`);}
+function talkStep(dl){if(!talkOn())return;const t=S.talk;let i=t.i;do i+=dl;while(i>=0&&i<t.o.length&&talkGone(t.o[i]));
+ if(i<0)return;t.i=Math.min(i,t.o.length);save();
+ if(t.i<t.o.length){tmReset(tmLast);tmGo(tmLast);}else{tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});tmSave();}
+ render();}
+function talkBox(){if(!talkOn())return row('发言顺序','<i>未安排</i>','安排','openTalk()');
+ const t=S.talk,cur=talkCur(),nx=talkNext();
+ return `<div class="tk"><div class="tkh"><span>${t.k==='police'?'警上发言':'发言顺序'}</span><button class="btn" onclick="openTalk()">重排</button></div>
+  <div class="tko">${t.o.map((x,j)=>`<span class="${j<t.i?'done':j===t.i?'cur':''} ${talkGone(x)?'dd':''}">${x}</span>`).join('')}</div>
+  <div class="tkn">${cur?`<b>${lab(cur)} 发言</b><small>第 ${t.i+1}/${t.o.length} 位${nx?`，下一位 ${nx}号`:'，最后一位'}</small>`:'<b>发言结束</b>'}</div>
+  <div class="tkb"><button class="btn" ${t.i>0?'':'disabled'} onclick="talkStep(-1)">上一位</button><button class="btn pri" ${cur?'':'disabled'} onclick="talkStep(1)">${nx?'下一位并计时':'结束发言'}</button></div></div>`;}
+
+/* ---------- 身份技能速查 ---------- */
+const RI={seer:'每晚查验一名玩家：好人还是狼人。',
+ medium:'每晚查验一名玩家的具体身份；验到已学习的机械狼，显示它学到的身份。',
+ witch:'有一瓶解药、一瓶毒药，各用一次。全程不能自救，同一夜不能同时用两瓶。',
+ hunter:'出局时可以开枪带走一名玩家；被毒杀、殉情等情况不能开枪。',
+ idiot:'白天被投票放逐时翻牌，视为出局但可继续发言，失去投票权；夜间死亡不能翻牌。',
+ guard:'每晚守护一名玩家免受狼刀，可以守自己，不能连续两夜守同一人。同守同救则死亡，挡不住毒药。',
+ knight:'白天可翻牌与一名玩家决斗，整局一次：对方是狼人则其出局并直接入夜；对方是好人则骑士出局。',
+ magician:'每晚可交换两名玩家的号码，当夜狼刀、毒药、查验作用到交换后的玩家；每个号码整局只能被交换一次。',
+ merchant:'整局可交易一次，把查验、毒药或猎枪交给一名玩家：交给好人则其成为幸运儿；交给狼人则黑市商人死亡。',
+ dreamer:'每晚必须摄梦一名玩家，梦游者当夜免疫狼刀和毒药；连续两夜摄同一人则其死亡；摄梦人夜间死亡，梦游者一同死亡。',
+ grave:'从第 2 夜起，得知前一天被放逐的玩家是好人还是狼人。',
+ witchhunter:'从第 2 夜起可狩猎一名玩家：是狼人则其天亮死亡，是好人则猎魔人死亡。免疫女巫的毒药。',
+ hybrid:'首夜选一名玩家做榜样。属平民阵营，被预言家查验永远是好人。',
+ villager:'没有技能，靠发言和投票找出狼人。',
+ villagerXY:'没有技能。离孙悟空最近的平民是唐僧（本人不知道）：查验显示平民，投票多算 0.5 票，寻宝点到唐僧无法获取宝物。',
+ wolf:'每晚和狼队一起刀一名玩家；白天可以自爆，直接进入黑夜。',
+ wolfking:'狼人。出局时可以开枪带走一名玩家；被毒杀等情况不能开枪。',
+ demon:'狼人。每晚查验一名玩家是不是神职；夜间免死，狼刀和毒药对其无效。',
+ beauty:'狼人。每晚魅惑一名玩家，狼美人出局时被魅惑者一同殉情（被骑士决斗出局不触发）；不能连续两夜魅惑同一人，不能自爆。',
+ elder:'狼人，首夜和狼弟互相确认。狼兄出局前，狼弟被查验是好人。',
+ younger:'狼人。首夜不入狼窝、不参与狼刀；狼兄出局的当夜觉醒，单独刀一人，之后加入狼队。觉醒前被查验是好人。',
+ gargoyle:'狼人，不与狼队相认。每晚查验一名玩家的具体身份；其他狼人全部出局后带刀。不能自爆。',
+ mechwolf:'狼人，不入狼窝。整局可学习一名玩家的身份并获得其技能（下一夜起可用）；其他狼人全部出局后带刀。不能自爆。',
+ nightmare:'狼人，首夜不与狼队相认。每晚恐惧一名玩家，使其当夜不能使用技能；恐惧到狼人则狼队当夜不能刀人。',
+ bloodmoon:'狼人。白天自爆后，当夜所有神职的技能被封印。',
+ wukong:'好人领袖。每晚点人寻宝（点到狼人得 A、神职得 B、平民得 C）：A 火眼金睛（觉醒后查验身份）、B 定海神针（击杀二郎神，一次）、C 镇魔圈（每晚护一人及左右）。集齐三件当夜觉醒，觉醒后夜里不死。',
+ zixia:'每晚加持一名玩家；加持到孙悟空或二郎神，其当晚分开寻宝两次。不能连续两晚加持同一人。',
+ guanyin:'甘露水整局一次，救当晚的刀口（不能自救）；整局只能收服一人，被收服者投票跟观音，观音出局时一同殉情。',
+ heixiong:'每晚得知左右两侧最近的存活玩家里有没有狼；唐僧在旁边时结果反转。',
+ erlang:'天庭领袖。每晚点人寻宝（点到狼人得 A、神职得 B、平民得 C）：A 天眼（觉醒后查验身份）、B 三尖两刃刀（击杀孙悟空，一次）、C 哮天犬（每晚封印一人技能）。集齐三件当夜觉醒，下一夜起和天兵一起刀人。',
+ tianbing:'天庭阵营，每晚一起刀一名玩家。不能自爆。'};
+const CAMP={god:'神职',villager:'平民阵营',wolf:'狼人阵营'};
+const roleInfo=(k,b=S.board)=>b==='xiyou'&&k==='villager'?RI.villagerXY:RI[k]||'';
+function openGuide(b=S.board){const bd=BOARDS[b]||BD();
+ sheet(`<h2>${ic('book')} 身份速查</h2><div class="gb">${Object.entries(BOARDS).map(([k,x])=>`<button class="btn ${k===b?'act':''}" onclick="openGuide('${k}')">${x.name}</button>`).join('')}</div>
+  <div class="lbl"><strong>${bd.name}</strong>${bd.desc}</div>
+  <div class="rg">${Object.keys(bd.cnt).map(k=>{const r=R[k];return `<div class="${r.c}"><img src="img/${pic(k,b)}.png" alt=""><div><b>${r.n}${bd.cnt[k]>1?` ×${bd.cnt[k]}`:''}<small>${CAMP[r.c]}</small></b><p>${roleInfo(k,b)}</p></div></div>`;}).join('')}</div>
+  ${note(b==='xiyou'?'胜负（屠边）：孙悟空、紫霞仙子、观音、黑熊精全体出局，或平民（含唐僧）全体出局，天庭获胜；二郎神和天兵全体出局，好人获胜。':'胜负（屠边）：神职全体出局或平民全体出局，狼人获胜；狼人全体出局，好人获胜。')}`);}
+
+/* ---------- 对局统计 ---------- */
+// 只用本机的历史对局（和当前对局）计算
+function statGames(){const h=loadHist();return S.log.length&&!h.some(g=>g.id===S.id)?[{id:S.id,end:Date.now(),board:S.board,day:S.day,win:S.win,names:S.names,seats:S.seats,log:S.log},...h]:h;}
+const sideOf=s=>s.role&&R[s.role]&&R[s.role].c==='wolf'?'wolf':'good';
+const pct=(a,b)=>b?Math.round(a*100/b)+'%':'—';
+const avgDay=a=>a.length?(a.reduce((x,g)=>x+(+g.day||0),0)/a.length).toFixed(1):'—';
+const bar2=(g,w)=>`<div class="sb2">${g+w?`<i class="g" style="flex:${g}"></i><i class="w" style="flex:${w}"></i>`:''}</div>`;
+function statsOf(gs){const fin=gs.filter(g=>g.win&&g.win.side),good=fin.filter(g=>g.win.side==='good').length,by={},P={};
+ gs.forEach(g=>(by[g.board]=by[g.board]||[]).push(g));
+ fin.forEach(g=>g.seats.forEach(s=>{const n=cleanName(String(g.names[s.n-1]||''));if(!n||!s.role)return;const p=P[n]=P[n]||{n:0,w:0,wolf:0};p.n++;if(sideOf(s)===g.win.side)p.w++;if(sideOf(s)==='wolf')p.wolf++;}));
+ return {gs,fin,good,wolf:fin.length-good,by,P};}
+function openStats(){const t=statsOf(statGames());
+ sheet(`<h2>${ic('chart')} 对局统计</h2>${t.gs.length?`
+  <div class="sx"><span><b>${t.gs.length}</b>局</span><span><b>${t.fin.length}</b>已分胜负</span><span class="g"><b>${pct(t.good,t.fin.length)}</b>好人胜</span><span class="w"><b>${pct(t.wolf,t.fin.length)}</b>狼人胜</span><span><b>${avgDay(t.fin)}</b>平均天数</span></div>${bar2(t.good,t.wolf)}
+  <div class="lbl"><strong>各板子</strong>绿色好人胜，红色狼人胜</div>
+  <div class="st2">${Object.entries(t.by).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const f=a.filter(g=>g.win&&g.win.side),g=f.filter(x=>x.win.side==='good').length;
+   return `<div><b>${bdName({board:k})}</b><small>${a.length} 局 · 好人 ${g} 胜 · 狼人 ${f.length-g} 胜 · 平均 ${avgDay(f)} 天</small>${bar2(g,f.length-g)}</div>`;}).join('')}</div>
+  <div class="lbl"><strong>玩家</strong>按名字统计已分胜负的对局</div>
+  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>`<div class="pl"><b>${n}</b><small>${p.n} 局 · 胜率 ${pct(p.w,p.n)} · 当狼 ${p.wolf} 次</small></div>`).join('')}</div>`:note('录了玩家名字的对局才会统计到人。')}`
+  :note('还没有对局。新开一局时，上一局会存入历史对局并计入统计。')}${note(`统计本机保存的最近 ${HMAX} 局历史对局${S.log.length?'和当前对局':''}，不上传。`)}
+  <div class="pkf"><button class="btn" onclick="openHistory()">← 历史对局</button></div>`);}
+
+/* ---------- 复盘长图 ---------- */
+// 在本机画成 PNG，手机上用系统分享（可存相册），电脑上直接下载
+const PAL={bg:'#2b2216',card:'#382d1e',ink:'#e4e2da',muted:'#b3aa9a',line:'#55493a',wolf:'#f2a08c',god:'#a9c8ea',villager:'#b9d39a',accent:'#bda38b'};
+const imgName=g=>{const d=new Date(g.end||Date.now()),p=x=>String(x).padStart(2,'0');return `狼人杀复盘-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.png`;};
+const loadImg=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});
+function wrapText(c,t,w){const out=[];let line='';for(const ch of [...t]){if(line&&c.measureText(line+ch).width>w){out.push(line);line=ch;}else line+=ch;}out.push(line);return out;}
+function fitText(c,t,w){if(c.measureText(t).width<=w)return t;let s=[...t];while(s.length&&c.measureText(s.join('')+'…').width>w)s.pop();return s.join('')+'…';}
+function rrect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+const imgLine=x=>x.replace(/\u{1F396}/gu,'(警长)').replace(/\u{1F3C6}\s*/gu,'');
+async function drawReview(g){
+ const W=1080,P=56,F=getComputedStyle(document.body).fontFamily,f=(s,b)=>`${b?600:400} ${s}px ${F}`,ks=[...new Set(g.seats.filter(s=>s.role).map(s=>s.role))],im={};
+ await Promise.all(ks.map(async k=>{im[k]=await loadImg(`img/${pic(k,g.board)}.png`);}));
+ const cv=document.createElement('canvas'),c=cv.getContext('2d'),TX=P+150,TW=W-TX-P,LH=42;
+ c.font=f(28);const logs=g.log.map(l=>({t:l.t,ls:imgLine(l.x).split('｜').flatMap(x=>wrapText(c,x,TW))}));
+ const cw=(W-P*2-16)/2,ch=100,H=P+74+60+(g.win?96:0)+20+6*(ch+12)+40+60+logs.reduce((a,l)=>a+l.ls.length*LH+20,0)+90;
+ cv.width=W;cv.height=H;c.textBaseline='top';c.fillStyle=PAL.bg;c.fillRect(0,0,W,H);
+ let y=P;c.fillStyle=PAL.ink;c.font=f(52,1);c.fillText('狼人杀 · 对局复盘',P,y);y+=74;
+ c.fillStyle=PAL.muted;c.font=f(30);c.fillText(fitText(c,`${bdName(g)} · ${when({end:g.end||Date.now()})} · ${g.day} 天`,W-P*2),P,y);y+=60;
+ if(g.win){const k=g.win.side==='wolf'?'wolf':'villager';c.fillStyle=k==='wolf'?'#4e2c22':'#34432a';rrect(c,P,y,W-P*2,76,16);c.fill();c.fillStyle=PAL[k];c.font=f(34,1);c.fillText(fitText(c,winText(g.win),W-P*2-56),P+28,y+19);y+=96;}
+ y+=20;c.imageSmoothingEnabled=false;
+ g.seats.forEach((s,i)=>{const x=P+(i%2)*(cw+16),yy=y+Math.floor(i/2)*(ch+12),r=s.role&&R[s.role];
+  rrect(c,x,yy,cw,ch,14);if(s.dead){c.setLineDash([8,6]);c.strokeStyle=PAL.line;c.lineWidth=2;c.stroke();c.setLineDash([]);}else{c.fillStyle=PAL.card;c.fill();}
+  if(r&&im[r.k]){c.globalAlpha=s.dead?.4:1;c.drawImage(im[r.k],x+14,yy+14,72,72);c.globalAlpha=1;}
+  const tx=x+100,tw=cw-114;c.font=f(30,1);c.fillStyle=s.dead?PAL.muted:PAL.ink;const no=`${s.n}号`;c.fillText(no,tx,yy+14);let nx=tx+c.measureText(no).width+10;
+  const nm=cleanName(String(g.names[s.n-1]||''));if(nm){c.font=f(26);c.fillStyle=PAL.muted;const t=fitText(c,nm,tw-(nx-tx)-(s.badge?80:0));c.fillText(t,nx,yy+18);nx+=c.measureText(t).width+10;}
+  if(s.badge){c.font=f(24,1);c.fillStyle=PAL.accent;c.fillText('警长',nx,yy+19);}
+  c.font=f(28,1);c.fillStyle=r?PAL[r.c]:PAL.muted;const rn=r?r.n:'未录入';c.fillText(rn,tx,yy+56);
+  if(s.dead){const w0=c.measureText(rn).width+12;c.font=f(24);c.fillStyle=PAL.muted;c.fillText(fitText(c,`${s.at}${CAUSE[s.dead]||''}`,tw-w0),tx+w0,yy+60);}});
+ y+=6*(ch+12)+40;c.fillStyle=PAL.ink;c.font=f(34,1);c.fillText('过程',P,y);y+=60;
+ logs.forEach(l=>{c.font=f(26);c.fillStyle=PAL.muted;c.fillText(l.t,P,y+2);c.font=f(28);c.fillStyle=PAL.ink;l.ls.forEach((t,j)=>c.fillText(t,TX,y+j*LH));y+=l.ls.length*LH+20;
+  c.fillStyle=PAL.line;c.fillRect(P,y-10,W-P*2,1);});
+ c.font=f(24);c.fillStyle=PAL.muted;c.fillText('狼人杀法官记录 · 本机生成',P,H-P-10);
+ return cv;}
+let lastImg=null; // {name,blob,url}
+function askImage(){if(S.hide&&!S.win)return sheet(`<h2>${ic('pic')} 复盘长图</h2>${note('长图会显示全部玩家的身份。对局还没结束，确定现在生成吗？')}<div class="pkf"><button class="btn" onclick="openLog()">取消</button><button class="btn pri" onclick="makeImage()">仍然生成</button></div>`);makeImage();}
+async function makeImage(id){const g=id?hist(id):S;if(!g)return;
+ sheet(`<h2>${ic('pic')} 复盘长图</h2>${note('正在生成…')}`);
+ try{const cv=await drawReview(g),blob=await new Promise(r=>cv.toBlob(r,'image/png'));if(!blob)throw Error('toBlob');
+  if(lastImg)URL.revokeObjectURL(lastImg.url);lastImg={name:imgName(g),blob,url:URL.createObjectURL(blob),id:id||''};
+  sheet(`<h2>${ic('pic')} 复盘长图</h2><img class="lp" src="${lastImg.url}" alt="复盘长图预览">${note('手机上也可以长按图片保存。图片只在本机生成。')}
+   <div class="pkf"><button class="btn" onclick="${id?`openHist('${id}')`:'openLog()'}">← 返回</button><button class="btn pri" onclick="saveImage()">${ic('save')} 保存 / 分享</button></div>`);
+ }catch(e){sheet(`<h2>${ic('pic')} 复盘长图</h2>${note('生成失败，可以改用“复制复盘文本”。')}<div class="pkf"><button class="btn" onclick="close_()">关闭</button></div>`);}}
+async function saveImage(){const m=lastImg;if(!m)return;
+ try{const f=new File([m.blob],m.name,{type:'image/png'});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:m.name});return toast('已分享');}
+ }catch(e){if(e&&e.name==='AbortError')return;}
+ const a=document.createElement('a');a.href=m.url;a.download=m.name;document.body.appendChild(a);a.click();a.remove();toast('已保存：'+m.name);}
+
+/* ---------- 大屏公开模式 ---------- */
+// 只显示公开信息：号码、名字、存活、警长、阶段、发言人、计时；不显示任何身份
+const SCREEN=location.hash==='#screen'; // 新窗口打开的大屏，只读不写
+let pubOn=SCREEN,pubInt=0;
+function openPub(){sheet(`<h2>${ic('tv')} 大屏公开模式</h2>${note('给玩家看的画面：只显示号码、名字、存活与出局、警长、当前阶段、发言人和计时，不显示任何身份。昨夜死讯在公布前不会显示。')}
+ <div class="opts" style="margin-top:12px"><button class="btn pri" onclick="pubEnter()">${ic('tv')} 本机全屏显示<small>点“返回法官界面”回来</small></button><button class="btn" onclick="pubWindow()">${ic('tv')} 新窗口打开<small>拖到投屏或外接屏</small></button></div>
+ ${note('新窗口跟着本机的对局自动更新。数据只存在本机，其他手机或平板无法同步。')}`);}
+function pubEnter(){close_();pubOn=true;render();try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}}
+function pubExit(){pubOn=false;clearInterval(pubInt);pubInt=0;try{document.fullscreenElement&&document.exitFullscreen();}catch(e){}render();}
+function pubWindow(){close_();const w=window.open(location.pathname+'#screen','lrs-screen');if(!w)toast('浏览器拦截了新窗口');}
+// 已公布的出局：当夜（及第 1 天竞选时）的夜间死亡还没宣布
+const pubDead=s=>!!s.dead&&!(s.dead==='night'&&s.at===`第${S.day}夜`&&(S.night||electing()));
+const PUBC={exile:'放逐',boom:'自爆',duel:'决斗'};
+function pubTimer(){const run=tms.find(t=>t.end&&tmLeft(t)>0),t=run||tms.find(t=>t.left<t.dur*1e3);return t?{l:tmLeft(t),run:!!run}:null;}
+function pubTimerHTML(){const t=pubTimer();return t?`<div class="ptm ${t.l<=0?'over':t.l<=1e4?'low':''}" id="ptm"><small>发言计时</small><b>${t.l<=0?'时间到':tmText(t.l)}</b></div>`:'<div class="ptm" id="ptm"></div>';}
+function pubHTML(){
+ const cur=talkCur(),nx=talkNext(),al=S.seats.filter(s=>!pubDead(s)).length,el=!S.night&&electing();
+ const ph=S.win?winText():S.night?'天黑请闭眼':el?'警长竞选':S.d?'今天的放逐已完成':'发言与投票';
+ return `<main class="pub" id="top"><div class="ph"><div><small>${BD().name}</small><b>${label()}</b><span>${ph}</span></div>${pubTimerHTML()}</div>
+  ${cur?`<div class="pnow">${lab(cur)} 发言中${nx?`<small>下一位 ${nx}号</small>`:''}</div>`:''}
+  <div class="pg">${S.seats.map(s=>{const d=pubDead(s),t=[];if(s.badge)t.push('警长');if(s.flip)t.push('已翻牌');if(el&&S.police.includes(s.n))t.push(S.out.includes(s.n)?'退水':'上警');
+   return `<div class="ps ${d?'out':''} ${cur===s.n?'now':''} ${nx===s.n?'nx':''}"><b>${s.n}</b><span>${S.names[s.n-1]||'&nbsp;'}</span><em>${d?PUBC[s.dead]||'出局':cur===s.n?'发言中':nx===s.n?'下一位':''}</em>${t.length?`<i>${t.join(' · ')}</i>`:''}</div>`;}).join('')}</div>
+  <div class="pf"><span>存活 <b>${al}</b> 人</span>${SCREEN?'':'<button class="btn" onclick="pubExit()">返回法官界面</button>'}</div></main>`;}
+function pubRender(){$('#app').innerHTML=pubHTML();const d=document.documentElement;d.classList.add('pubm');d.classList.remove('dim');d.classList.toggle('day',!S.night);
+ if(!pubInt)pubInt=setInterval(()=>{if(!pubOn){clearInterval(pubInt);pubInt=0;return;}const e=$('#ptm');if(e)e.outerHTML=pubTimerHTML();},250);}
+function pubSync(e){if(!SCREEN)return;
+ if(e.key===KEY){S=load();render();}
+ if(e.key==='lrs-timer'){try{const a=JSON.parse(e.newValue);if(Array.isArray(a))a.slice(0,2).forEach((t,i)=>{if(t&&TDS.includes(t.dur))tms[i]={dur:t.dur,left:+t.left||0,end:+t.end||0};});}catch(x){}}}
+addEventListener('storage',pubSync);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pubOn&&!SCREEN)pubExit();});
+
 loadPrefs();
 home=pristine()&&!S.n.step; // 走过一步就算已开局，刷新后留在对局
-settle(); // 打开旧存档时也整理一次并补判胜负
+if(SCREEN)render();else settle(); // 打开旧存档时也整理一次并补判胜负；大屏窗口只读
 booted=true;
 /* ---------- 新版提示 ---------- */
 // 新版下载完先等待，用户点了才启用并刷新；对局已存盘，刷新后接着录

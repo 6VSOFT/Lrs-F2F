@@ -45,6 +45,7 @@ await part('12 板模拟与场景', async () => {
 await reload();
 await part('西游杀', async () => { const r = JSON.parse(await ev(src('xiyou.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('西游杀整局数 ' + r.out.games, r.out.games >= 100, r.out); ok('西游杀覆盖觉醒、击杀、记票', r.out.awake > 0 && r.out.kills > 0 && r.out.votes > 0, r.out); });
 await part('备份、语音、西游面板', async () => { const r = JSON.parse(await ev(src('extra.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('备份等用例数', r.pass >= 35, r.pass); });
+await part('发言顺序、速查、统计、长图、大屏', async () => { const r = JSON.parse(await ev(src('more.js'))); pass += r.pass; r.fails.forEach(f => ok(f, false)); ok('新功能用例数', r.pass >= 45, r.pass); });
 await reload();
 await part('专项探测', async () => { const r = JSON.parse(await ev(src('probe.js'))); r.forEach(x => ok(x, x.startsWith('PASS'))); ok('探测数', r.length >= 16, r.length); });
 await reload();
@@ -117,7 +118,7 @@ await part('复制', async () => {
   ok('剪贴板', (await ev("navigator.clipboard.readText().catch(e=>'ERR')")).startsWith('【狼人杀法官记录】')); const ct = (await ev('navigator.clipboard.readText()')).replace(/\r/g, ''); ok('复制遇｜换行', ct.includes('身份：甲1号\n　　　　乙2号\n　　　　丙3号') && !ct.includes('｜'), ct.slice(-80)); await ev('close_()');
 });
 await part('界面宽度', async () => {
-  const views = {elect: "S.police=[1,3];S.night=false;S.day=1;S.badgeDone=S.badgeLost=false;S.d=null;render()", vote: "openVote('exile')", menu: 'openMenu()', hist: 'openHistory()', upd: 'close_();newSW={};render()', hide: "newSW=null;S.hide=true;S.night=true;S.n.step=2;render()", hidelog: 'openLog()', unhide: 'close_();S.hide=false;render()'};
+  const views = {elect: "S.police=[1,3];S.night=false;S.day=1;S.badgeDone=S.badgeLost=false;S.d=null;render()", vote: "openVote('exile')", menu: 'openMenu()', hist: 'openHistory()', upd: 'close_();newSW={};render()', hide: "newSW=null;S.hide=true;S.night=true;S.n.step=2;render()", hidelog: 'openLog()', unhide: 'close_();S.hide=false;render()', talk: "S.night=false;S.day=1;S.d=null;S.badgeDone=false;S.police=[1,3,5];render();openTalk()", talkbox: "talkGo();render()", guide: "openGuide('xiyou')", guide2: "openGuide('bros')", stats: 'openStats()', pubv: 'openPub()', pub: 'close_();pubOn=true;render()', pubn: 'S.night=true;render()', unpub: 'pubExit()'};
   for (const [w, h] of [[320, 568], [375, 812], [430, 932], [768, 1024], [844, 390], [1024, 768], [1280, 800], [1920, 1080]]) {
     await size(w, h); await sleep(120);
     const r = await ev(`(()=>{const bad=[];const keep=JSON.stringify(S);S.names=['小明','阿强','Amy李','美玲','老王老王老王老王','Ken','张三丰','大飞','阿珍','小白','Leo','陈大文'];
@@ -137,6 +138,22 @@ await part('旧存档与断网', async () => {
   await ev('doExile(2);close_()'); await srv.stop(); await reload(2500);
   ok('断网可打开', await ev("S.seats[1].dead==='exile'&&document.querySelectorAll('.seat').length===12")); ok('断网全部角色图', await ev("Promise.all([...ROLES.map(r=>r.k),'villager-xy'].map(k=>fetch('img/'+k+'.png').then(x=>x.ok,()=>false))).then(a=>a.filter(Boolean).length)") === 31);
   await ev('nextNight()'); ok('断网可继续', await ev('S.day===3&&S.night'));
+});
+await part('大屏新窗口', async () => {
+  await srv.stop().catch(() => {}); const s2 = await serve(), b = await browser(); await b.size(1280, 720); await b.go(s2.url, 2500);
+  await b.ev(`(()=>{startGame('std');'${ROLES[0]}'.split(',').forEach((k,i)=>S.seats[i].role=k);S.names[0]='小明';S.police=[1,3];S.n.knife=5;S.n.step=stepsOf().length-1;settle();confirmDawn();close_();return 1})()`);
+  const before = await b.ev('localStorage.getItem(KEY)'); await b.go(s2.url + '?screen#screen', 2000);
+  ok('大屏窗口只读', await b.ev('SCREEN&&pubOn') && await b.ev('localStorage.getItem(KEY)') === before);
+  const t = () => b.ev("document.querySelector('#app').innerText");
+  ok('大屏不显示身份', !/预言家|女巫|猎人|白痴|狼人|平民/.test(await t()) && (await t()).includes('小明') && !await b.ev("!!document.querySelector('.seat,img')"));
+  ok('竞选时不公布昨夜死讯', !await b.ev("document.querySelectorAll('.ps.out').length") && (await t()).includes('警长竞选') && (await t()).includes('上警'));
+  ok('大屏没有返回按钮', !await b.ev("!!document.querySelector('.pf .btn')"));
+  // 模拟法官窗口改了存档
+  await b.ev("(()=>{const o=JSON.parse(localStorage.getItem(KEY));o.seats.forEach(s=>s.badge=s.n===3);o.badgeDone=true;o.talk={k:'day',dir:1,st:1,last:false,o:[1,2,3,4,6,7,8,9,10,11,12],i:0,day:1};const v=JSON.stringify(o);localStorage.setItem(KEY,v);dispatchEvent(new StorageEvent('storage',{key:KEY,newValue:v}));return 1})()");
+  ok('跟着更新', await b.ev("document.querySelectorAll('.ps.out').length") === 1 && (await t()).includes('1号 小明 发言中') && (await t()).includes('警长'));
+  await b.ev("(()=>{const v=JSON.stringify([{dur:120,left:120000,end:Date.now()+65000},{dur:90,left:90000,end:0}]);dispatchEvent(new StorageEvent('storage',{key:'lrs-timer',newValue:v}));return 1})()"); await sleep(600);
+  ok('大屏计时跟着走', /^1:0[45]$/.test(await b.ev("document.querySelector('#ptm b')?.textContent")), await b.ev("document.querySelector('#ptm')?.textContent"));
+  ok('大屏无错误', !b.errs.length, b.errs); await b.close(); await s2.stop();
 });
 ok('无脚本错误', !B.errs.length, B.errs); await B.close();
 

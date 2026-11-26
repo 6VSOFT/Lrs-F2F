@@ -22,7 +22,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+      # 装中文字体：偶尔卡住，限时 3 分钟、失败重试 3 次
+      - name: 安装字体
+        timeout-minutes: 8
+        run: |
+          for i in 1 2 3; do
+            timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -qq &&
+            timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji && exit 0
+            echo "第 $i 次安装字体失败，重试"; sleep 10
+          done
+          exit 1
       - run: node tests/run.mjs
   play:
     runs-on: ubuntu-latest
@@ -37,7 +46,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk fonts-noto-color-emoji
+      # 装中文字体：偶尔卡住，限时 3 分钟、失败重试 3 次
+      - name: 安装字体
+        timeout-minutes: 8
+        run: |
+          for i in 1 2 3; do
+            timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update -qq &&
+            timeout 180 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y -qq --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji && exit 0
+            echo "第 $i 次安装字体失败，重试"; sleep 10
+          done
+          exit 1
       - run: node tests/play.mjs --round ${{ matrix.round }} --boards ${{ matrix.boards }} --seed ${{ github.run_number }}${{ matrix.round }}
       - if: failure()
         uses: actions/upload-artifact@v7

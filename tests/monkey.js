@@ -14,7 +14,7 @@ for(const bd of Object.keys(BOARDS)){for(let run=0;run<6;run++){
   const open=document.querySelector('#bg').classList.contains('show');
   let els=[...(open?document.querySelector('#sheet'):document.querySelector('#app')).querySelectorAll('button,.seat,.winbar')].filter(e=>!e.disabled);
   // avoid ending the run
-  els=els.filter(e=>!/新开一局|换板子|清空全部|确认删除|删除这一局|新版/.test(e.textContent)&&!e.classList.contains('bd')&&!/copyLog/.test(e.getAttribute('onclick')||''));
+  els=els.filter(e=>!/新开一局|换板子|清空全部|确认删除|删除这一局|新版|新窗口|保存 \/ 分享|导出备份|从文件导入/.test(e.textContent)&&!e.classList.contains('bd')&&!/copyLog/.test(e.getAttribute('onclick')||''));
   if(!open&&Math.random()<.75){const s=els.filter(e=>e.closest('.side')&&!/上一步/.test(e.textContent));if(s.length)els=s;}
   if(!open&&!els.length){note('dead end '+bd,JSON.stringify(S.n));break;}
   if(open&&(Math.random()<.06||!els.length)){close_();continue;}
