@@ -11,12 +11,12 @@ const rb=l=>{const r=rowOf(l);return r&&r.querySelector('button');};
 const none=()=>document.querySelector('.pkf .btn').click();
 const ri=n=>Math.floor(Math.random()*n),pick=a=>a[ri(a.length)];
 const next=()=>{const b=B('下一步');if(!b)throw Error('stuck at '+stepsOf()[S.n.step]+' d'+S.day);b.click();};
-const FLOW={hybrid:['天黑 混血儿 狼人 女巫 预言家 猎人 白痴 警长 天亮结算','天黑 狼人 女巫 预言家 猎人 天亮结算'],std:['天黑 狼人 女巫 预言家 猎人 白痴 警长 天亮结算','天黑 狼人 女巫 预言家 猎人 天亮结算'],
-wkguard:['天黑 守卫 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 天亮结算'],demon:['天黑 守卫 狼人 女巫 预言家 猎人 恶魔 警长 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 恶魔 天亮结算'],
-beauty:['天黑 守卫 狼人 狼美人 女巫 预言家 骑士 警长 天亮结算','天黑 守卫 狼人 狼美人 女巫 预言家 天亮结算'],magician:['天黑 魔术师 狼人 女巫 预言家 猎人 狼王 警长 天亮结算','天黑 魔术师 狼人 女巫 预言家 猎人 狼王 天亮结算'],
-bros:['天黑 黑市商人 守卫 狼兄狼弟 狼人 女巫 预言家 幸运儿 警长 天亮结算','天黑 黑市商人 守卫 狼弟 狼人 女巫 预言家 幸运儿 天亮结算'],wkdream:['天黑 摄梦人 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],
-gargoyle:['天黑 狼人 女巫 石像鬼 预言家 猎人 守墓人 石像鬼查验 警长 天亮结算','天黑 石像鬼查验 狼人 女巫 预言家 猎人 守墓人 天亮结算'],mech:['天黑 第一轮：确认身份 守卫 机械狼 狼人 女巫 通灵师查验 猎人 警长 天亮结算','天黑 守卫 机械狼 狼人 女巫 通灵师查验 猎人 机械狼状态 天亮结算'],
-nightmare:['天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],blood:['天黑 狼人 女巫 预言家 猎魔人 白痴 警长 天亮结算','天黑 狼人 女巫 预言家 猎魔人 天亮结算']};
+const FLOW={hybrid:['天黑 混血儿 狼人 女巫 预言家 猎人 白痴 天亮结算','天黑 狼人 女巫 预言家 猎人 天亮结算'],std:['天黑 狼人 女巫 预言家 猎人 白痴 天亮结算','天黑 狼人 女巫 预言家 猎人 天亮结算'],
+wkguard:['天黑 守卫 狼人 女巫 预言家 猎人 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 天亮结算'],demon:['天黑 守卫 狼人 女巫 预言家 猎人 恶魔 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 恶魔 天亮结算'],
+beauty:['天黑 守卫 狼人 狼美人 女巫 预言家 骑士 天亮结算','天黑 守卫 狼人 狼美人 女巫 预言家 天亮结算'],magician:['天黑 魔术师 狼人 女巫 预言家 猎人 狼王 天亮结算','天黑 魔术师 狼人 女巫 预言家 猎人 狼王 天亮结算'],
+bros:['天黑 黑市商人 守卫 狼兄狼弟 狼人 女巫 预言家 幸运儿 天亮结算','天黑 黑市商人 守卫 狼弟 狼人 女巫 预言家 幸运儿 天亮结算'],wkdream:['天黑 摄梦人 狼人 女巫 预言家 猎人 天亮结算','天黑 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],
+gargoyle:['天黑 狼人 女巫 石像鬼 预言家 猎人 守墓人 石像鬼查验 天亮结算','天黑 石像鬼查验 狼人 女巫 预言家 猎人 守墓人 天亮结算'],mech:['天黑 第一轮：确认身份 守卫 机械狼 狼人 女巫 通灵师查验 猎人 天亮结算','天黑 守卫 机械狼 狼人 女巫 通灵师查验 猎人 机械狼状态 天亮结算'],
+nightmare:['天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 天亮结算','天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],blood:['天黑 狼人 女巫 预言家 猎魔人 白痴 天亮结算','天黑 狼人 女巫 预言家 猎魔人 天亮结算']};
 const W=['wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','nightmare','bloodmoon'];
 const out={};
 for(const bd of Object.keys(FLOW)){
@@ -234,7 +234,7 @@ setup('mech',MM);S.n.learn=3;S.n.knife=5;S.n.step=stepsOf().length-1;settle();se
 {startGame('std');setRole(0,'seer');const b=JSON.stringify(S),u=undo.length;let threw=0;try{commit('x',()=>{S.day=9;S.seats[0].role=null;throw Error('测试');});}catch(e){threw=1;}ok('出错整步还原',threw&&JSON.stringify(S)===b&&undo.length===u&&localStorage.getItem(KEY)===b&&lu().length===Math.min(50,u));doUndo();ok('还原后撤销正常',!S.seats[0].role);}
 // 历史
 close_();startGame('std');localStorage.removeItem(HK);startGame('std');ok('空局不入历史',loadHist().length===0);S.names[0]='小明';day('wkguard',WK);S.names[0]='小明';doExile(6);const gid=S.id,lg=S.log.length;startGame('demon');let h=loadHist();ok('入历史',h.length===1&&h[0].id===gid&&h[0].board==='wkguard'&&h[0].log.length===lg&&S.id!==gid);
-openMenu();ok('菜单历史 1 局',SH().includes('历史对局1 局')&&SH().includes('版本 '+VER));openHistory();ok('历史列表',SH().includes('狼王守卫')&&SH().includes('未分胜负'));sh().querySelector('.hs .btn').click();ok('历史详情',document.querySelectorAll('#sheet .ros>div').length===12&&SH().includes('投票放逐：6号·狼人')&&SH().includes('小明'));
+openMenu();ok('菜单历史 1 局',SH().includes('历史对局1 局')&&SH().includes('版本 '+VER));openHistory();ok('历史列表',SH().includes('狼王守卫')&&SH().includes('未分胜负'));sh().querySelector('.hs .btn').click();ok('历史详情',document.querySelectorAll('#sheet .ros>div').length===12&&SH().includes('投票放逐6号·狼人')&&SH().includes('小明'));
 let ct='';const oc=navigator.clipboard.writeText;navigator.clipboard.writeText=t=>{ct=t;return Promise.resolve();};copyLog(gid);navigator.clipboard.writeText=oc;ok('历史复制',ct.startsWith('【狼人杀法官记录】狼王守卫 20')&&ct.includes('1号 小明 预言家')&&ct.includes('过程：'));
 B('删除这一局').click();ok('删除要确认',loadHist().length===1&&SH().includes('无法恢复'));B('取消',sh()).click();ok('取消回详情',SH().includes('复制'));B('删除这一局').click();B('确认删除').click();ok('删除',loadHist().length===0&&SH().includes('还没有历史'));close_();
 day('wkguard',WK);const g2=S.id;startGame('std');ok('再入历史',loadHist().some(g=>g.id===g2));doUndo();ok('撤销新开局移出历史',S.id===g2&&!loadHist().some(g=>g.id===g2)&&S.board==='wkguard');

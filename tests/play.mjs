@@ -123,6 +123,7 @@ async function game(bd){
   if(u<.12)return;
   if(u<.22){await rb('警长');await none();lost=1;s=await st();need(s.badgeLost,'lost');return;}
   if(u<.3){badge=pick(sortA());await seatT(badge);await btn('警徽');hadBadge=1;s=await st();need(s.seats[badge-1].badge,'badge');G.badge++;return;}
+  X.polled=shuf(pres).slice(0,2+ri(3));await rb('上警');for(const x of X.polled)await pk(x);await btn('确定');need((await st()).police.join()===[...X.polled].sort((a,b)=>a-b).join(),'police');G.police=(G.police||0)+1;
   let po=[...X.polled].sort((a,b)=>a-b);let outs=[];
   if(po.length>1&&rnd()<.4){outs=[pick(po)];await rb('退水');await pk(outs[0]);await btn('确定');G.out=(G.out||0)+1;}
   const run=po.filter(x=>pres.includes(x)&&!outs.includes(x));if(!run.length)return;

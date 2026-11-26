@@ -196,7 +196,7 @@ try {
  setup(D0, {zx: 4}); dawn(); nightN({}); S.n.step = stepsOf().indexOf('zixia'); render(); rb('加持').click(); ok('紫霞不能连续点同一人', pkb(4).disabled); close_();
  // 哮天犬
  ok('夜间顺序', stepsOf().join(' ') === 'close zixia erlang wukong wolf guanyin heixiong dawn', stepsOf());
- close_(); startGame('xiyou'); ok('首夜先确认身份', [].concat(BOARDS.xiyou.n1).join(' ') === 'close ids zixia erlang wukong wolf guanyin heixiong sheriff dawn'); S.n.step = 1; render(); ok('身份没录完不能下一步', !B('下一步') && side().includes('天兵 0/3'));
+ close_(); startGame('xiyou'); ok('首夜先确认身份', [].concat(BOARDS.xiyou.n1).join(' ') === 'close ids zixia erlang wukong wolf guanyin heixiong dawn'); S.n.step = 1; render(); ok('身份没录完不能下一步', !B('下一步') && side().includes('天兵 0/3'));
  setup(); S.n.step = stepsOf().indexOf('wukong'); render(); ok('第二轮不再录身份', !rowOf('孙悟空') && !side().includes('请确认你的身份')); S.n.step = stepsOf().indexOf('wolf'); render(); ok('第二轮天兵不再录身份', !rowOf('天兵 ') && side().includes('天兵请睁眼'));
  setup(); S.xy.erlang.C = 1; nightN({elC: 4}); S.n.step = stepsOf().indexOf('heixiong'); render(); ok('哮天犬封印黑熊精', side().includes('被哮天犬封印') && !document.querySelector('.side .res'));
  setup(); S.xy.erlang.C = 1; nightN({elC: 3, gyB: 6}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('哮天犬封印观音', side().includes('被哮天犬封印') && rb('收服').disabled); S.n.step = stepsOf().length - 1; dawn(); ok('被封印不能收服', !S.xy.bound);

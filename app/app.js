@@ -1,4 +1,4 @@
-const VER='v34'; // 与 sw.js 的版本号一致
+const VER='v35'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -23,34 +23,34 @@ const R=Object.fromEntries(ROLES.map(r=>[r.k,r]));
 const B4={seer:1,witch:1,hunter:1,villager:4,wolf:3};
 const BOARDS={
  hybrid:{name:'预女猎白混',desc:'预女猎白混 + 3民 + 4狼',cnt:{seer:1,witch:1,hunter:1,idiot:1,hybrid:1,villager:3,wolf:4},pack:['wolf'],
-  n1:'close hybrid wolf witch seer hunter idiot sheriff dawn',n2:'close wolf witch seer hunter dawn'},
+  n1:'close hybrid wolf witch seer hunter idiot dawn',n2:'close wolf witch seer hunter dawn'},
  std:{name:'标准版 预女猎白',desc:'预女猎白 + 4民 + 4狼',cnt:{...B4,idiot:1,wolf:4},pack:['wolf'],
-  n1:'close wolf witch seer hunter idiot sheriff dawn',n2:'close wolf witch seer hunter dawn'},
+  n1:'close wolf witch seer hunter idiot dawn',n2:'close wolf witch seer hunter dawn'},
  wkguard:{name:'狼王守卫',desc:'预女猎守 + 4民 + 3狼 + 狼王',cnt:{...B4,guard:1,wolfking:1},pack:['wolf','wolfking'],mark:'wolfking',
-  n1:'close guard wolf witch seer hunter sheriff dawn',n2:'close guard wolf witch seer hunter dawn'},
+  n1:'close guard wolf witch seer hunter dawn',n2:'close guard wolf witch seer hunter dawn'},
  demon:{name:'恶魔守卫',desc:'预女猎守 + 4民 + 3狼 + 恶魔',cnt:{...B4,guard:1,demon:1},pack:['wolf','demon'],
-  n1:'close guard wolf witch seer hunter demon sheriff dawn',n2:'close guard wolf witch seer hunter demon dawn'},
+  n1:'close guard wolf witch seer hunter demon dawn',n2:'close guard wolf witch seer hunter demon dawn'},
  beauty:{name:'狼美人骑士',desc:'预女守骑 + 4民 + 3狼 + 狼美人',cnt:{seer:1,witch:1,guard:1,knight:1,villager:4,wolf:3,beauty:1},pack:['wolf','beauty'],
-  n1:'close guard wolf beauty witch seer knight sheriff dawn',n2:'close guard wolf beauty witch seer dawn'},
+  n1:'close guard wolf beauty witch seer knight dawn',n2:'close guard wolf beauty witch seer dawn'},
  magician:{name:'狼王魔术师',desc:'预女猎魔术 + 4民 + 3狼 + 狼王',cnt:{...B4,magician:1,wolfking:1},pack:['wolf','wolfking'],mark:'wolfking',
-  n1:'close magician wolf witch seer hunter wolfking sheriff dawn',n2:'close magician wolf witch seer hunter wolfking dawn'},
+  n1:'close magician wolf witch seer hunter wolfking dawn',n2:'close magician wolf witch seer hunter wolfking dawn'},
  bros:{name:'狼兄狼弟黑市商人',desc:'预女商守 + 4民 + 2狼 + 狼兄弟',cnt:{seer:1,witch:1,merchant:1,guard:1,villager:4,wolf:2,elder:1,younger:1},pack:['wolf','elder'],
-  n1:'close merchant guard bros wolf witch seer lucky sheriff dawn',n2:'close merchant guard younger wolf witch seer lucky dawn'},
+  n1:'close merchant guard bros wolf witch seer lucky dawn',n2:'close merchant guard younger wolf witch seer lucky dawn'},
  wkdream:{name:'狼王摄梦人',desc:'预女猎摄 + 4民 + 3狼 + 狼王',cnt:{...B4,dreamer:1,wolfking:1},pack:['wolf','wolfking'],mark:'wolfking',
-  n1:'close dreamer wolf witch seer hunter sheriff dawn',n2:'close dreamer wolf witch seer hunter dawn'},
+  n1:'close dreamer wolf witch seer hunter dawn',n2:'close dreamer wolf witch seer hunter dawn'},
  gargoyle:{name:'石像鬼守墓人',desc:'预女猎墓 + 4民 + 3狼 + 石像鬼',cnt:{...B4,grave:1,gargoyle:1},pack:['wolf'],
-  n1:'close wolf witch gargoyleId seer hunter grave gargoyle sheriff dawn',n2:'close gargoyle wolf witch seer hunter grave dawn'},
+  n1:'close wolf witch gargoyleId seer hunter grave gargoyle dawn',n2:'close gargoyle wolf witch seer hunter grave dawn'},
  mech:{name:'机械狼通灵师',desc:'通女猎守 + 4民 + 3狼 + 机械狼',cnt:{medium:1,witch:1,hunter:1,guard:1,villager:4,wolf:3,mechwolf:1},pack:['wolf'],
   ids:['guard','mechwolf','wolf','witch','medium','hunter'],
-  n1:'close ids guard mech wolf witch medium hunter sheriff dawn',n2:'close guard mech wolf witch medium hunter mechgun dawn'},
+  n1:'close ids guard mech wolf witch medium hunter dawn',n2:'close guard mech wolf witch medium hunter mechgun dawn'},
  nightmare:{name:'噩梦之影摄梦人',desc:'预女猎摄 + 4民 + 3狼 + 噩梦之影',cnt:{...B4,dreamer:1,nightmare:1},pack:['wolf'],
-  n1:'close nightmare dreamer wolf witch seer hunter sheriff dawn',n2:'close nightmare dreamer wolf witch seer hunter dawn'},
+  n1:'close nightmare dreamer wolf witch seer hunter dawn',n2:'close nightmare dreamer wolf witch seer hunter dawn'},
  blood:{name:'血月使徒猎魔人',desc:'预女猎魔白 + 4民 + 3狼 + 血月',cnt:{seer:1,witch:1,witchhunter:1,idiot:1,villager:4,wolf:3,bloodmoon:1},pack:['wolf','bloodmoon'],mark:'bloodmoon',
-  n1:'close wolf witch seer witchhunter idiot sheriff dawn',n2:'close wolf witch seer witchhunter dawn'},
+  n1:'close wolf witch seer witchhunter idiot dawn',n2:'close wolf witch seer witchhunter dawn'},
  // 西游杀：两位领袖每晚“寻宝”，集齐三件宝物觉醒；离孙悟空最近的平民是唐僧（本人不知道）
  xiyou:{name:'西游杀',desc:'悟空紫霞观音黑熊 + 4民 + 二郎神 + 3天兵',cnt:{wukong:1,zixia:1,guanyin:1,heixiong:1,villager:4,erlang:1,tianbing:3},pack:['tianbing'],wn:'天兵',
   ids:['zixia','erlang','wukong','tianbing','guanyin','heixiong'],
-  n1:'close ids zixia erlang wukong wolf guanyin heixiong sheriff dawn',n2:'close zixia erlang wukong wolf guanyin heixiong dawn'}};
+  n1:'close ids zixia erlang wukong wolf guanyin heixiong dawn',n2:'close zixia erlang wukong wolf guanyin heixiong dawn'}};
 for(const b of Object.values(BOARDS)){b.n1=b.n1.split(' ');b.n2=b.n2.split(' ');}
 const CAUSE={exile:'放逐出局',night:'夜间阵亡',shot:'枪杀出局',duel:'决斗出局',boom:'自爆出局',love:'殉情出局'};
 const SKILL={check:'查验',poison:'毒药',gun:'猎枪'};
@@ -73,6 +73,7 @@ function norm(s){
   if(!BOARDS[o.board])o.board='hybrid'; // 旧存档默认原板子
   o.seats.forEach(x=>{if(x.flip&&!x.dead)x.dead='exile';}); // 旧存档：已翻牌的白痴补记为出局
   o.xy=Object.assign(freshXY(),s.xy||{});
+  const fl=[].concat(BOARDS[o.board][o.day===1?'n1':'n2']).join(' ').split(' ');if(o.n.step>=fl.length)o.n.step=fl.length-1;
   return o;
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));return s&&s.seats?norm(s):fresh();}catch(e){return fresh();}}
@@ -552,7 +553,6 @@ function confirmDawn(){
   if(S.day===1){
    L('身份：'+['zixia','tianbing','erlang','wukong','guanyin','heixiong','hybrid','magician','merchant','dreamer','guard','nightmare','wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','bloodmoon','witch','seer','medium','hunter','witchhunter','idiot','knight','grave']
     .filter(cntOf).map(k=>`${R[k].n}${idn(k)}号${k==='hybrid'?`（榜样${S.model||'—'}号）`:''}`).join('｜')+(S.board==='xiyou'&&XY().tang?`｜唐僧${XY().tang}号（平民）`:''));
-   if(S.police.length)L(`上警：${S.police.join('、')}号`);
   }
   const say2=(k,f,verb,none)=>{if(who(k))L(`${R[k].n}：${blocked(k)?'技能被封':n[f]>0?`${verb} ${n[f]}号`:none}`);};
   if(who('nightmare'))L(`噩梦之影：${n.fear>0?'恐惧 '+n.fear+'号':'不恐惧'}`);
@@ -671,13 +671,13 @@ const present=s=>!s.dead||(s.dead==='night'&&s.at===`第${S.day}夜`);
 const runners=()=>S.seats.filter(s=>present(s)&&S.police.includes(s.n)&&!S.out.includes(s.n)).map(s=>s.n);
 const nums=a=>a.length?a.join('、')+'号':'<i>未录入</i>';
 function electPanel(){
- return say('“警长竞选。”<br>（发言、退水、警下投票；选出警长后再公布死讯）')+row('上警',nums(S.police),'选择','pickPolice()')+row('退水',S.out.length?nums(S.out):'无','选择','pickOut()',!S.police.length)+
+ return say('“警长竞选，要竞选警长的玩家请举手。”<br>（先记录上警号码，再发言、退水、警下投票；选出警长后再公布死讯）')+row('上警',nums(S.police),'选择','pickPolice()')+row('退水',S.out.length?nums(S.out):'无','选择','pickOut()',!S.police.length)+
   row('警长投票',voteState('sheriff'),'记票',"openVote('sheriff')",!runners().length)+row('警长','<i>未选</i>','选择','pickSheriff()');
 }
 function pickSheriff(){seatPicker('谁当选警长？',{ok:s=>S.police.length?runners().includes(s.n):present(s),none:{label:'警徽流失',value:0},done:n=>commit('',()=>sheriff_(n))});}
 function sheriff_(n){
  L(`警长竞选：上警 ${S.police.length?S.police.join('、')+'号':'—'}${S.out.length?`，退水 ${S.out.join('、')}号`:''} → ${n?lab(n)+' 当选警长':'警徽流失'}`);
- S.seats.forEach(s=>s.badge=s.n===n);S.v=null;S.elLater=false;
+ S.seats.forEach(s=>s.badge=s.n===n);S.v=null;S.elLater=false;S.talk=null; // 选完警长重新安排发言
  if(n)S.badgeDone=true;else S.badgeLost=true;
 }
 // 警长出局：移交或撕毁
@@ -869,7 +869,8 @@ function seatHTML(s){
 function tapSeat(i){
  const s=S.seats[i],r=s.role&&R[s.role];
  let o=`<h2>${r&&!S.hide?`<img src="img/${pic(r.k)}.png" alt="">`:''}${lab(s.n)}${S.hide?'':` · ${r?r.n:'未录入'}`}</h2>${r&&!S.hide?note(roleInfo(r.k)):''}<div class="opts">`;
- o+=`<button class="btn ${s.badge?'act':''}" onclick="doBadge(${i})">${ic('badge')} ${s.badge?'撤销警徽':'警徽'}<small>${s.badge?'当前持有':S.badgeLost?'警徽已流失':'授予/移交'}</small></button>`;
+ o+=`<button class="btn ${s.badge?'act':''}" onclick="doBadge(${i})">${ic('badge')} ${s.badge?'撤销警徽':'警徽'}<small>${s.badge?'误操作更正':S.badgeLost?'警徽已流失':'授予/移交'}</small></button>`;
+ if(s.badge)o+=`<button class="btn" onclick="close_();passBadge()">${ic('badge')} 移交 / 撕毁警徽<small>警长出局时</small></button>`;
  if(!s.dead){
   o+=`<button class="btn danger" ${S.night||S.d?'disabled':''} onclick="doExile(${s.n})">${ic('vote')} 放逐出局<small>${S.night?'仅白天':S.d?'今天已放逐':!S.hide&&s.role==='idiot'&&!s.flip?'白痴翻牌，视为出局':'白天投票'}</small></button>`;
   o+=`<button class="btn danger" onclick="doDie(${i},'night')">${ic('moon')} 夜间阵亡<small>被刀/毒等</small></button>`;
@@ -945,7 +946,23 @@ function rosterHTML(g=S,hide=S.hide){return `<div class="ros">${g.seats.map(s=>{
 function openLog(){sheet(`<h2 class="lh"><span>${ic('log')} 对局记录</span><button class="btn pri" onclick="copyLog()">${ic('copy')} 复制</button></h2>${winBar()}<button class="btn pk1" onclick="askImage()">${ic('pic')} 生成复盘长图</button>${S.hide?'<button class="btn pk1" data-peek>'+ic('eye')+' 按住查看过程</button>':''}${rosterHTML()}${S.hide?`<div class="mask">${logHTML()}</div>`:logHTML()}`);}
 // 记录里的“｜”换行显示
 const logLine=x=>x.split('｜').join('<br>').replace(/🎖/g,ic('badge')).replace(/🏆/g,ic('cup'));
-function logHTML(g=S){return `<ul class="log">${g.log.length?g.log.map(l=>`<li><i>${l.t}</i><span>${logLine(l.x)}</span></li>`).join(''):'<li>暂无记录</li>'}</ul>`;}
+// 记录按“第N夜 / 第N天”分段；号码加粗，身份按阵营上色，死亡、查验、警徽等按类别标色
+const RN=[...ROLES.map(r=>[r.n,r.c]),['好人','villager'],['神职','god'],['唐僧','villager']].sort((a,b)=>b[0].length-a[0].length),RNM=Object.fromEntries(RN);
+const RRE=new RegExp(`(${RN.map(x=>x[0]).join('|')})|(\\d+(?:、\\d+)*号)`,'g');
+const hl=t=>t.replace(RRE,(m,r,n)=>r?`<em class="r ${RNM[r]}">${r}</em>`:`<em class="no">${n}</em>`);
+const logKind=x=>/^\u{1F3C6}/u.test(x)?'win':/^更正/.test(x)?'fix':/平安夜/.test(x)?'safe':/死亡|出局|阵亡|带走|自爆|殉情|放逐：/.test(x)?'dead':/警长|警徽|上警/.test(x)?'badge':/查验/.test(x)?'chk':/狼刀|刀 \d|毒 \d/.test(x)?'knife':'';
+// 记票明细：每个被投的人一行，票数条、票数、投票人；弃票单列
+function voteItem(x){const m=x.match(/^(放逐投票|警长投票)(（PK）)?：([\s\S]*)$/);if(!m)return '';
+ const rows=[],none=[];let max=0;
+ m[3].split('｜').forEach(t=>{const a=t.match(/^(\d+)号 ([\d.]+)票（(.*)）$/),b=t.match(/^弃票 (.*)$/);if(a){rows.push({n:a[1],k:+a[2],w:a[3]});max=Math.max(max,+a[2]);}else if(b)none.push(b[1]);});
+ const body=rows.length?rows.map((r,i)=>`<span class="vr ${i===0&&(rows.length===1||rows[1].k<r.k)?'top':''}"><em class="no">${r.n}号</em><i class="vb"><i style="width:${max?Math.round(r.k*100/max):0}%"></i></i><b>${r.k} 票</b><small>${r.w.replace(/\u{1F396}/gu,'(警长)')}</small></span>`).join('')+(none.length?`<span class="vr vn">弃票 ${none.join('')}</span>`:''):'<span class="vr vn">无人投票</span>';
+ return `<li class="vote ${m[1]==='警长投票'?'badge':''}"><span><b class="lk">${m[1]}${m[2]?'<small>PK</small>':''}</b><span class="lb vt">${body}</span></span></li>`;}
+function logItem(x){const v=voteItem(x);if(v)return v;const m=x.match(/^([^：｜\d]{1,8})：([\s\S]*)$/),body=(m?m[2]:x).split('｜').map(hl).join('<br>');
+ return `<li class="${logKind(x)}"><span>${m?`<b class="lk">${m[1]}</b>`:''}<span class="lb">${body.replace(/\u{1F396}/gu,ic('badge')).replace(/\u{1F3C6}\s*/gu,ic('cup')+' ')}</span></span></li>`;}
+function logHTML(g=S){if(!g.log.length)return '<ul class="log"><li>暂无记录</li></ul>';
+ const ps=[];let cur=null;
+ g.log.forEach(l=>{if(/^—— 天[亮黑] ——$/.test(l.x))return;if(!cur||cur.t!==l.t){cur={t:l.t,a:[]};ps.push(cur);}cur.a.push(l.x);});
+ return ps.map(p=>{const n=p.t.includes('夜');return `<div class="lgp ${n?'n':'d'}"><div class="lgh">${ic(n?'moon':'sun')} ${p.t}</div><ul class="log">${p.a.map(logItem).join('')}</ul></div>`;}).join('');}
 function openMenu(){
  sheet(`<h2>菜单</h2><div class="opts">
   <button class="btn" ${undo.length?'':'disabled'} onclick="doUndo()">${ic('undo')} 撤销上一步<small>含夜间录入</small></button>
@@ -990,13 +1007,14 @@ function copyFallback(t){
 const TDS=[60,90,120,180,300];
 // 两个计时器，默认 2:00 和 1:30；同一时间只走一个，开始一个会暂停另一个
 let tms=[{dur:120,left:120e3,end:0},{dur:90,left:90e3,end:0}],tmInt=0,audio=null;
+const TML=['警长发言','玩家发言']; // 第 1 个给警长（默认 120 秒），第 2 个给其他玩家（默认 90 秒）
 const tmLeft=t=>t.end?Math.max(0,t.end-Date.now()):t.left;
 const tmText=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 function tmSave(){try{localStorage.setItem('lrs-timer',JSON.stringify(tms));}catch(e){}}
-const timerHTML=()=>tms.map((t,i)=>tmOne(t,i)).join('');
+const timerHTML=()=>tmOne(tms[1],1)+tmOne(tms[0],0); // 玩家发言在上
 function tmOne(t,i){
  const l=tmLeft(t),run=!!t.end&&l>0;
- return `<div class="tm ${l<=0?'over':l<=1e4?'low':''}" id="tm${i}"><span>发言计时</span><b>${l<=0?'时间到':tmText(l)}</b><button class="btn" onclick="tmDur(${i})">${t.dur}秒</button><div class="tb"><button class="btn" onclick="tmReset(${i});tmDraw()">重置</button><button class="btn" onclick="tmReset(${i});tmGo(${i})">重置后开始</button><button class="btn ${run?'':'act'}" onclick="tmGo(${i})">${run?'暂停':l<=0?'下一位':'开始'}</button></div></div>`;
+ return `<div class="tm ${l<=0?'over':l<=1e4?'low':''}" id="tm${i}"><span>${TML[i]}</span><b>${l<=0?'时间到':tmText(l)}</b><button class="btn" onclick="tmDur(${i})">${t.dur}秒</button><div class="tb"><button class="btn" onclick="tmReset(${i});tmDraw()">重置</button><button class="btn" onclick="tmReset(${i});tmGo(${i})">重置后开始</button><button class="btn ${run?'':'act'}" onclick="tmGo(${i})">${run?'暂停':l<=0?'下一位':'开始'}</button></div></div>`;
 }
 function tmDraw(){tms.forEach((t,i)=>{const e=$('#tm'+i);if(e)e.outerHTML=tmOne(t,i);});}
 function tmTickOn(){clearInterval(tmInt);tmInt=setInterval(tmTick,200);}
@@ -1008,8 +1026,7 @@ function tmTick(){
  const e=$('#tm'+i);if(e){e.querySelector('b').textContent=tmText(l);e.classList.toggle('low',l<=1e4);}
 }
 function tmGo(i){
- if(!S.night&&tmLeft(tms[i])<=0&&talkCur()){tmLast=i;return talkStep(1);} // 时间到点“下一位”：换到下一个发言人
- tmLast=i;
+ if(!S.night&&tmLeft(tms[i])<=0&&talkCur())return talkStep(1); // 时间到点“下一位”：换到下一个发言人
  try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume();}catch(e){} // 手机须在点击时启用声音
  const t=tms[i],l=tmLeft(t),go=!(t.end&&l>0);
  tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});
@@ -1143,10 +1160,12 @@ function xyPanel(){const x=XY(),now=k=>S.night?huntRes(k).filter(r=>r.got).map(r
 
 /* ---------- 发言顺序 ---------- */
 // S.talk：{k:'day' 白天 | 'police' 警上, dir:1 号码递增 | -1 递减, st:起点, last:警长最后发言, o:顺序, i:当前第几位, day}
-let tmLast=0; // 最近用的计时器：换下一位时重新开始它
+// 轮到警长用“警长发言”计时（默认 120 秒），其他人用“玩家发言”（默认 90 秒）
+const talkTm=n=>n&&n===chief()?0:1;
+function talkTime(){const n=talkCur();if(!n)return;const k=talkTm(n);tmReset(k);tmGo(k);}
 const talkPool=k=>(k==='police'?runners():S.seats.filter(s=>!s.dead).map(s=>s.n)).sort((a,b)=>a-b);
 const chief=()=>{const c=S.seats.find(s=>s.badge&&!s.dead);return c?c.n:0;};
-const talkChief=d=>d.k==='day'&&d.last?chief():0;
+const talkChief=d=>d.k==='day'?chief():0; // 有警长时警长固定最后发言
 // 从 st 起按方向排一圈；st 不在名单里时，从它下一个（按方向）开始
 function talkFrom(a,st,dir){if(!a.length)return [];let i=a.indexOf(st);
  if(i<0){i=dir>0?a.findIndex(x=>x>st):a.length-1-[...a].reverse().findIndex(x=>x<st);if(i<0||i>=a.length)i=dir>0?0:a.length-1;}
@@ -1160,29 +1179,28 @@ function talkDefault(){const d=window._tk,c=talkChief(d),a=talkPool(d.k).filter(
  d.st=c?(d.dir>0?a.find(x=>x>c)||a[0]:[...a].reverse().find(x=>x<c)||a.at(-1))||0:a.includes(d.st)?d.st:a[0]||0;}
 function openTalk(){const t=S.talk&&S.talk.day===S.day?S.talk:null,pol=electing()&&runners().length>0;
  window._tk={k:t&&(t.k==='day'||pol)?t.k:pol?'police':'day',dir:t?t.dir:1,st:t?t.st:0,last:t?t.last:true};
- if(!t||!talkPool(window._tk.k).includes(window._tk.st))talkDefault();drawTalk();}
-function drawTalk(keep){const d=window._tk,c=talkChief(d),cc=d.k==='day'?chief():0,o=talkOrder(d),pol=electing()&&runners().length>0;
+ if(!t||talkChief(window._tk)||!talkPool(window._tk.k).includes(window._tk.st))talkDefault();drawTalk();}
+function drawTalk(keep){const d=window._tk,c=talkChief(d),o=talkOrder(d),pol=electing()&&runners().length>0;
  sheet(`<h2>${ic('talk')} 发言顺序</h2>
   <div class="seg">${pol?`<button class="btn ${d.k==='police'?'act':''}" onclick="talkSet('k','police')">警上发言</button>`:''}<button class="btn ${d.k==='day'?'act':''}" onclick="talkSet('k','day')">${pol?'全体发言':'白天发言'}</button></div>
   <div class="seg"><button class="btn ${d.dir>0?'act':''}" onclick="talkSet('dir',1)">号码递增 →</button><button class="btn ${d.dir<0?'act':''}" onclick="talkSet('dir',-1)">← 号码递减</button></div>
-  ${cc?`<div class="seg"><button class="btn ${d.last?'act':''}" onclick="talkSet('last',${!d.last})">${d.last?ic('ok')+' ':''}警长 ${cc}号 最后发言（归票）</button></div>`:''}
-  <div class="lbl"><strong>起点</strong>点号码选第一个发言的人</div>
-  <div class="pk">${talkPool(d.k).filter(n=>n!==c).map(n=>`<button class="${n===d.st?'cur':''}" onclick="talkSet('st',${n})"><b>${n}</b><small>${S.names[n-1]||'&nbsp;'}</small></button>`).join('')}</div>
-  <button class="btn" style="width:100%;margin-top:8px" onclick="talkRand()">随机起点</button>
+  ${c?note(`警长 ${c}号 最后发言（归票）：号码递增从 ${c}号 的下一位开始，号码递减从 ${c}号 的上一位开始。`):`<div class="lbl"><strong>起点</strong>点号码选第一个发言的人</div>
+  <div class="pk">${talkPool(d.k).map(n=>`<button class="${n===d.st?'cur':''}" onclick="talkSet('st',${n})"><b>${n}</b><small>${S.names[n-1]||'&nbsp;'}</small></button>`).join('')}</div>
+  <button class="btn" style="width:100%;margin-top:8px" onclick="talkRand()">随机起点</button>`}
   <div class="lbl"><strong>顺序</strong>${o.length} 人</div><div class="tko">${o.map(n=>`<span>${n}</span>`).join('')||'<i>没有可发言的玩家</i>'}</div>
   <div class="pkf"><button class="btn" onclick="close_()">取消</button><button class="btn pri" ${o.length?'':'disabled'} onclick="talkGo()">开始发言</button></div>`,keep);}
-function talkSet(f,v){const d=window._tk;d[f]=v;if(f==='k'||f==='last'||(f==='dir'&&talkChief(d)))talkDefault();drawTalk(true);}
+function talkSet(f,v){const d=window._tk;d[f]=v;if(f==='k'||(f==='dir'&&talkChief(d)))talkDefault();drawTalk(true);}
 function talkRand(){const d=window._tk,c=talkChief(d),a=talkPool(d.k).filter(x=>x!==c);if(a.length)d.st=a[Math.floor(Math.random()*a.length)];drawTalk(true);}
-function talkGo(){const d=window._tk,o=talkOrder(d);if(!o.length)return;S.talk={...d,o,i:0,day:S.day};close_();save();tmReset(tmLast);tmGo(tmLast);render();toast(`${o[0]}号 先发言`);}
+function talkGo(){const d=window._tk,o=talkOrder(d);if(!o.length)return;S.talk={...d,o,i:0,day:S.day};close_();save();talkTime();render();toast(`${o[0]}号 先发言`);}
 function talkStep(dl){if(!talkOn())return;const t=S.talk;let i=t.i;do i+=dl;while(i>=0&&i<t.o.length&&talkGone(t.o[i]));
  if(i<0)return;t.i=Math.min(i,t.o.length);save();
- if(t.i<t.o.length){tmReset(tmLast);tmGo(tmLast);}else{tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});tmSave();}
+ if(t.i<t.o.length)talkTime();else{tms.forEach(x=>{if(x.end){x.left=tmLeft(x);x.end=0;}});tmSave();}
  render();}
 function talkBox(){if(!talkOn())return row('发言顺序','<i>未安排</i>','安排','openTalk()');
  const t=S.talk,cur=talkCur(),nx=talkNext();
  return `<div class="tk"><div class="tkh"><span>${t.k==='police'?'警上发言':'发言顺序'}</span><button class="btn" onclick="openTalk()">重排</button></div>
   <div class="tko">${t.o.map((x,j)=>`<span class="${j<t.i?'done':j===t.i?'cur':''} ${talkGone(x)?'dd':''}">${x}</span>`).join('')}</div>
-  <div class="tkn">${cur?`<b>${lab(cur)} 发言</b><small>第 ${t.i+1}/${t.o.length} 位${nx?`，下一位 ${nx}号`:'，最后一位'}</small>`:'<b>发言结束</b>'}</div>
+  <div class="tkn">${cur?`<b>${lab(cur)} 发言</b><small>${TML[talkTm(cur)]} ${tms[talkTm(cur)].dur} 秒 · 第 ${t.i+1}/${t.o.length} 位${nx?`，下一位 ${nx}号`:'，最后一位'}</small>`:'<b>发言结束</b>'}</div>
   <div class="tkb"><button class="btn" ${t.i>0?'':'disabled'} onclick="talkStep(-1)">上一位</button><button class="btn pri" ${cur?'':'disabled'} onclick="talkStep(1)">${nx?'下一位并计时':'结束发言'}</button></div></div>`;}
 
 /* ---------- 身份技能速查 ---------- */
@@ -1234,7 +1252,7 @@ const avgDay=a=>a.length?(a.reduce((x,g)=>x+(+g.day||0),0)/a.length).toFixed(1):
 const bar2=(g,w)=>`<div class="sb2">${g+w?`<i class="g" style="flex:${g}"></i><i class="w" style="flex:${w}"></i>`:''}</div>`;
 function statsOf(gs){const fin=gs.filter(g=>g.win&&g.win.side),good=fin.filter(g=>g.win.side==='good').length,by={},P={};
  gs.forEach(g=>(by[g.board]=by[g.board]||[]).push(g));
- fin.forEach(g=>g.seats.forEach(s=>{const n=cleanName(String(g.names[s.n-1]||''));if(!n||!s.role)return;const p=P[n]=P[n]||{n:0,w:0,wolf:0};p.n++;if(sideOf(s)===g.win.side)p.w++;if(sideOf(s)==='wolf')p.wolf++;}));
+ fin.forEach(g=>g.seats.forEach(s=>{const n=cleanName(String(g.names[s.n-1]||''));if(!n||!s.role)return;const p=P[n]=P[n]||{n:0,w:0,wolf:0,ww:0};const sd=sideOf(s),won=sd===g.win.side;p.n++;if(won)p.w++;if(sd==='wolf'){p.wolf++;if(won)p.ww++;}}));
  return {gs,fin,good,wolf:fin.length-good,by,P};}
 function openStats(){const t=statsOf(statGames());
  sheet(`<h2>${ic('chart')} 对局统计</h2>${t.gs.length?`
@@ -1243,7 +1261,7 @@ function openStats(){const t=statsOf(statGames());
   <div class="st2">${Object.entries(t.by).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const f=a.filter(g=>g.win&&g.win.side),g=f.filter(x=>x.win.side==='good').length;
    return `<div><b>${bdName({board:k})}</b><small>${a.length} 局 · 好人 ${g} 胜 · 狼人 ${f.length-g} 胜 · 平均 ${avgDay(f)} 天</small>${bar2(g,f.length-g)}</div>`;}).join('')}</div>
   <div class="lbl"><strong>玩家</strong>按名字统计已分胜负的对局</div>
-  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>`<div class="pl"><b>${n}</b><small>${p.n} 局 · 胜率 ${pct(p.w,p.n)} · 当狼 ${p.wolf} 次</small></div>`).join('')}</div>`:note('录了玩家名字的对局才会统计到人。')}`
+  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return `<div class="pl"><b>${n}<small>${p.n} 局</small></b><div class="pr"><span><b>${pct(p.w,p.n)}</b>总胜率<small>${p.w}/${p.n}</small></span><span class="g"><b>${pct(gw,gn)}</b>神民胜率<small>${gw}/${gn}</small></span><span class="w"><b>${pct(p.ww,p.wolf)}</b>狼人胜率<small>${p.ww}/${p.wolf}</small></span></div></div>`;}).join('')}</div>`:note('录了玩家名字的对局才会统计到人。')}`
   :note('还没有对局。新开一局时，上一局会存入历史对局并计入统计。')}${note(`统计本机保存的最近 ${HMAX} 局历史对局${S.log.length?'和当前对局':''}，不上传。`)}
   <div class="pkf"><button class="btn" onclick="openHistory()">← 历史对局</button></div>`);}
 
@@ -1308,8 +1326,8 @@ function pubWindow(){close_();const w=window.open(location.pathname+'#screen','l
 // 已公布的出局：当夜（及第 1 天竞选时）的夜间死亡还没宣布
 const pubDead=s=>!!s.dead&&!(s.dead==='night'&&s.at===`第${S.day}夜`&&(S.night||electing()));
 const PUBC={exile:'放逐',boom:'自爆',duel:'决斗'};
-function pubTimer(){const run=tms.find(t=>t.end&&tmLeft(t)>0),t=run||tms.find(t=>t.left<t.dur*1e3);return t?{l:tmLeft(t),run:!!run}:null;}
-function pubTimerHTML(){const t=pubTimer();return t?`<div class="ptm ${t.l<=0?'over':t.l<=1e4?'low':''}" id="ptm"><small>发言计时</small><b>${t.l<=0?'时间到':tmText(t.l)}</b></div>`:'<div class="ptm" id="ptm"></div>';}
+function pubTimer(){const run=tms.find(t=>t.end&&tmLeft(t)>0),t=run||tms.find(t=>t.left<t.dur*1e3);return t?{l:tmLeft(t),run:!!run,n:TML[tms.indexOf(t)]}:null;}
+function pubTimerHTML(){const t=pubTimer();return t?`<div class="ptm ${t.l<=0?'over':t.l<=1e4?'low':''}" id="ptm"><small>${t.n}</small><b>${t.l<=0?'时间到':tmText(t.l)}</b></div>`:'<div class="ptm" id="ptm"></div>';}
 function pubHTML(){
  const cur=talkCur(),nx=talkNext(),al=S.seats.filter(s=>!pubDead(s)).length,el=!S.night&&electing();
  const ph=S.win?winText():S.night?'天黑请闭眼':el?'警长竞选':S.d?'今天的放逐已完成':'发言与投票';
