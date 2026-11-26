@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         round: [1, 2]
-        boards: ['hybrid,std,wkguard,demon', 'beauty,magician,bros,wkdream', 'gargoyle,mech,nightmare,blood', 'xiyou']
+        boards: ['hybrid,std,wkguard,demon', 'beauty,magician,bros,wkdream', 'gargoyle,mech,nightmare,blood', 'xiyou,masq']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

@@ -1,4 +1,4 @@
-const VER='v38'; // 与 sw.js 的版本号一致
+const VER='v39'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -49,7 +49,7 @@ const BOARDS={
   n1:'close wolf witch seer witchhunter idiot dawn',n2:'close wolf witch seer witchhunter dawn'},
  // 西游杀：两位领袖每晚“寻宝”，集齐三件宝物觉醒；离孙悟空最近的平民是唐僧（本人不知道）
  masq:{name:'假面舞会',desc:'预女舞白 + 4民 + 3狼 + 假面',cnt:{seer:1,witch:1,dancer:1,idiot:1,villager:4,wolf:3,mask:1},pack:['wolf'],
-  n1:'close wolf witch seer dancerId maskId idiot dawn',n2:'close dancer wolf mask witch seer dawn'},
+  n1:'close wolf maskId witch seer dancerId idiot dawn',n2:'close dancer wolf mask witch seer dawn'},
  xiyou:{name:'西游杀',desc:'悟空紫霞观音黑熊 + 4民 + 二郎神 + 3天兵',cnt:{wukong:1,zixia:1,guanyin:1,heixiong:1,villager:4,erlang:1,tianbing:3},pack:['tianbing'],wn:'天兵',
   ids:['zixia','erlang','wukong','tianbing','guanyin','heixiong'],
   n1:'close ids zixia erlang wukong wolf guanyin heixiong dawn',n2:'close zixia erlang wukong wolf guanyin heixiong dawn'}};
@@ -217,7 +217,7 @@ function resolve(){
  if(n.trade&&isWolf(seat(n.trade.n))){const m=one('merchant');die(m&&m.n,'trade');N.push('黑市商人与狼人交易，黑市商人死亡。');}
  if(n.dream&&n.dream===S.lastDream){die(n.dream,'dream');N.push(`${n.dream}号 连续两夜被摄梦，死亡。`);}
  if(S.board==='xiyou')xyResolve(die,C,N);
- {const r=danceOut();if(r&&r.out){die(r.out,'dance');N.push(`舞池结算：好人 ${r.g.length}、狼人 ${r.w.length}，${r.out}号 出局（解药救不了）。`);}}
+ {const r=danceOut();if(r&&r.out){die(r.out,'dance');N.push(`舞池结算：${danceDesc(r)} → ${r.out}号 出局（解药救不了）。`);}}
  for(let i=0;i<2;i++){
   const d=one('dreamer'),b=one('beauty');
   if(d&&C[d.n]&&n.dream&&!C[n.dream]&&!seat(n.dream).dead){die(n.dream,'dream');N.push(`摄梦人死亡，梦游者 ${n.dream}号 一同死亡。`);}
@@ -551,7 +551,9 @@ function pickDance(){seatPicker('舞者与哪三位共舞？',{multi:true,max:3,
 function danceOut(){const n=S.n,d=n.dance||[];if(d.length!==3)return null;
  const camp=x=>{const w=isWolf(seat(x));return n.mkM===x?!w:w;},w=d.filter(camp),g=d.filter(x=>!camp(x));
  return {w,g,out:w.length===1?w[0]:g.length===1?g[0]:0};}
-function danceRes(){const r=danceOut();if(!r)return '';return r.out?res(0,`共舞：好人 ${r.g.length}、狼人 ${r.w.length}${S.n.mkM&&(S.n.dance||[]).includes(S.n.mkM)?`（${S.n.mkM}号戴面具，阵营反转）`:''} → 天亮 ${lab(r.out)} 出局`):res(1,'共舞 3 人同阵营：无事发生');}
+// 写清每一方是谁、谁戴了面具，例：狼人 1、2号；好人 3号（戴面具，按好人算）
+function danceDesc(r){const m=S.n.mkM,one_=(l,nm,sd)=>l.length?`${nm} ${l.map(x=>x+'号'+(x===m?`（戴面具，按${sd}算）`:'')).join('、')}`:'';return [one_(r.w,'狼人','狼人'),one_(r.g,'好人','好人')].filter(Boolean).join('；');}
+function danceRes(){const r=danceOut();if(!r)return '';return r.out?res(0,`共舞：${danceDesc(r)} → 天亮 ${lab(r.out)} 出局`):res(1,'共舞 3 人同阵营：无事发生');}
 function pickModel(){seatPicker('榜样是几号？',{ok:s=>notMe(s,'hybrid'),done:n=>upd(()=>S.model=n)});}
 function pickWolves(){
  const pk=BD().pack,mine=s=>!!s.role&&pk.includes(s.role),extra=pk.filter(k=>k!=='wolf').map(k=>R[k].n).join('、');
@@ -592,7 +594,7 @@ function confirmDawn(){
   if(n.gcheck)L(`石像鬼查验：${n.gcheck}号 → ${exactName(seat(n.gcheck))}`);
   if(n.dcheck){const t=seat(n.dcheck);L(`恶魔查验：${n.dcheck}号 → ${t.role&&R[t.role].c==='god'?'神职':'非神职'}`);}
   if(n.hunt)L(`猎魔人：狩猎 ${n.hunt}号`);
-  if(who('dancer')||(n.dance||[]).length)L(`舞者：${blocked('dancer')?'技能被封':(n.dance||[]).length?`共舞 ${n.dance.join('、')}号`:'未共舞'}`);
+  if(S.day>1&&(who('dancer')||(n.dance||[]).length))L(`舞者：${blocked('dancer')?'技能被封':(n.dance||[]).length?`共舞 ${n.dance.join('、')}号`:'未共舞'}`);
   if(cntOf('mask')&&S.day>1&&one('mask')&&!one('mask').dead)L(`假面：${n.mkQ?`询问 ${n.mkQ}号（${(n.dance||[]).includes(n.mkQ)?'在':'不在'}舞池）`:'未询问'}｜${n.mkM?`面具 ${n.mkM}号`:'不戴面具'}`);
   if(n.lcheck)L(`幸运儿查验：${n.lcheck}号 → ${seerWolf(seat(n.lcheck))?'狼人':'好人'}`);if(n.lpoison)L(`幸运儿：毒 ${n.lpoison}号`);
   if(S.board==='xiyou')xyDawnLog();

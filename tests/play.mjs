@@ -40,7 +40,7 @@ const res1=()=>ev("(document.querySelector('.side .res')||{textContent:''}).text
 const need=(c,m)=>{if(!c)throw Error(m);};
 await cdp('Page.navigate',{url:URL_});await sleep(4000);await nav();
 const BOARDS=JSON.parse(await ev('JSON.stringify(BOARDS)')),R=JSON.parse(await ev('JSON.stringify(R)')),SK={check:'查验',poison:'毒药',gun:'猎枪'},CA=JSON.parse(await ev('JSON.stringify(CAUSE)'));
-const W=new Set(['wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','nightmare','bloodmoon','erlang','tianbing']);
+const W=new Set(['mask','wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','nightmare','bloodmoon','erlang','tianbing']);
 const NAMES=['小明','阿强','Amy李','美玲','老王老王老王老王','Ken','张三丰','大飞','阿珍','小白','Leo','陈大文'];
 const out={round,url:URL_,boards:{}};
 out.ver=await ev('caches.keys().then(k=>k.join())');
@@ -70,7 +70,7 @@ async function game(bd){
  const bad=x=>NG.has(x)||(how[x]&&['love','boom'].includes(how[x][0]));
  const open_=()=>Object.keys(how).map(Number).filter(x=>today(x)&&gunNow(x)&&!bad(x)&&!(SH.has(x)&&SH.get(x)[0]));
  const pend_=()=>open_().filter(x=>!SH.has(x));
- const X={lg:0,ld:0,lc:0,sw:[],awake:null,sealed:0,lastEx:0,polled:[]};const how={};let nights=0;
+ const X={lg:0,ld:0,lc:0,sw:[],awake:null,sealed:0,lastEx:0,polled:[],danced:[],lastMask:0};const how={};let nights=0;
  const XY=bd==='xiyou',XM={wukong:{A:0,B:0,C:0,used:false,awake:0},erlang:{A:0,B:0,C:0,used:false,awake:0},lastZx:0,bound:0,gyUsed:false};
  const dist=(a,b)=>{const q=Math.abs(a-b);return Math.min(q,12-q);};
  const tang=XY?deck.map((k,i)=>k==='villager'?i+1:0).filter(Boolean).sort((a,b)=>dist(a,at('wukong'))-dist(b,at('wukong'))||b-a)[0]:0;
@@ -135,14 +135,16 @@ async function game(bd){
   const can=k=>up(k)&&!(n.fear&&n.fear===at(k))&&!(X.sealed===d&&!W.has(k));
   const mg=x=>n.swap&&n.swap.length?(x===n.swap[0]?n.swap[1]:x===n.swap[1]?n.swap[0]:x):x;
   const deaths=()=>{if(XY)return xyDeaths();const D=new Map(),add=(x,c)=>{if(x&&!D.has(x)&&deck[x-1]!=='demon')D.set(x,c);},safe=x=>n.dream===x||n.mguard===x;
-   for(const x of [n.poison?mg(n.poison):0,n.lpoison])if(x&&!safe(x)&&deck[x-1]!=='witchhunter')add(x,'poison');
+   for(const x of [n.poison?mg(n.poison):0,n.lpoison])if(x&&!safe(x)&&!['witchhunter','dancer','mask'].includes(deck[x-1]))add(x,'poison');
+   const pool=n.dance||[],dImm=pool.includes(at('dancer'));
    if(n.mpoison&&n.dream!==n.mpoison)add(n.mpoison,'poison');
    const K=n.knife>0?mg(n.knife):0,both=K&&n.bknife===K;
-   if(K&&!safe(K)){const g=n.guard===K;if(both||g===!!n.anti)add(K,'knife');}
+   if(K&&!safe(K)&&!(dImm&&pool.includes(K))){const g=n.guard===K;if(both||g===!!n.anti)add(K,'knife');}
    if(n.bknife&&!safe(n.bknife)&&(both||n.guard!==n.bknife))add(n.bknife,'knife');
    if(n.mknife&&!safe(n.mknife)&&n.guard!==n.mknife)add(n.mknife,'knife');
    if(n.hunt)add(isW(n.hunt)?n.hunt:at('witchhunter'),'hunt');if(n.trade&&isW(n.trade.n))add(at('merchant'),'trade');
-   if(n.dream&&n.dream===X.ld)add(n.dream,'dream');if(has('dreamer')&&n.dream&&D.has(at('dreamer')))add(n.dream,'dream');if(has('beauty')&&n.charm&&D.has(at('beauty')))add(n.charm,'love');return D;};
+   if(n.dream&&n.dream===X.ld)add(n.dream,'dream');if(has('dreamer')&&n.dream&&D.has(at('dreamer')))add(n.dream,'dream');if(has('beauty')&&n.charm&&D.has(at('beauty')))add(n.charm,'love');
+   if(pool.length===3){const cw=x=>n.mkM===x?!isW(x):isW(x),w=pool.filter(cw),g=pool.filter(x=>!cw(x)),o=w.length===1?w[0]:g.length===1?g[0]:0;if(o){add(o,'dance');G.danceOut=(G.danceOut||0)+1;}}return D;};
   const xyDeaths=()=>{const D=new Map(),wk=at('wukong'),el=at('erlang'),gy=at('guanyin'),woke=k=>n[(k==='wukong'?'wk':'el')+'W']!==undefined?n[(k==='wukong'?'wk':'el')+'W']:!!XM[k].awake&&XM[k].awake<d,inv=woke('wukong');
    const add=x=>{if(x&&alive.has(x)&&!D.has(x)&&!(inv&&x===wk))D.set(x,'xy');};
    const ring=alive.has(wk)&&n.wkH&&n.wkH.C&&n.wkC?[n.wkC===1?12:n.wkC-1,n.wkC,n.wkC===12?1:n.wkC+1].filter(x=>x!==wk):[];
@@ -189,6 +191,10 @@ async function game(bd){
    if(key==='idiot')await ident('idiot');if(key==='knight')await ident('knight');
    if(key==='demon'){await ident('demon');if(up('demon')){await T2('查验','dcheck',A.filter(x=>x!==at('demon')));need((await res1()).includes('不是神职')===(R[deck[n.dcheck-1]].c!=='god'),'demon');}}
    if(key==='gargoyleId')await ident('gargoyle');
+   if(key==='dancerId')await ident('dancer');if(key==='maskId')await ident('mask');
+   if(key==='dancer'){if(up('dancer')){const el=A.filter(x=>!X.danced.includes(x));if(el.length<3)need((await side()).includes('不足 3 人'),'dance short');else{const ps=shuf(el).slice(0,3);await rb('共舞');for(const x of ps)await pk(x);await btn('确定');n.dance=ps;need((await st()).n.dance.join()===[...ps].sort((a,b)=>a-b).join(),'dance record');G.dance=(G.dance||0)+1;}}else need(!await ev("!!Q.rb('共舞')"),'dance open');}
+   if(key==='mask'&&up('mask')){await T2('询问','mkQ',A.filter(x=>x!==at('mask')));const inP=(n.dance||[]).includes(n.mkQ);need((await res1()).includes(inP?'在舞池':'不在舞池'),'mask query');
+    await T2('面具','mkM',A.filter(x=>x!==X.lastMask),{none:1,p:.3});if(n.mkM&&(n.dance||[]).includes(n.mkM))G.maskFlip=(G.maskFlip||0)+1;}
    if(key==='gargoyle'&&up('gargoyle')){await T2('查验','gcheck',A.filter(x=>x!==at('gargoyle')));need((await res1()).endsWith('：'+R[deck[n.gcheck-1]].n),'gargoyle');if(d>1)need((await side()).includes(A.some(x=>deck[x-1]==='wolf')?'未带刀':'带刀'),'garg knife');}
    if(key==='grave'){await ident('grave');if(d>1&&can('grave')){const t=await res1(),e=X.lastEx;need(!e?t.includes('无人'):t.includes('狼人')===isW(e),'grave '+t);}}
    if(key==='witchhunter'){await ident('witchhunter');if(d>1){if(can('witchhunter'))await T2('狩猎','hunt',A.filter(x=>x!==at('witchhunter')),{none:1,p:.4});else need(!await en('狩猎'),'hunt open');}else need(!await ev("!!Q.rb('狩猎')"),'hunt n1');}
@@ -234,7 +240,7 @@ async function game(bd){
   await adv('确认');for(const x of dl)kill(x,'night',`第${d}夜`);
   await chk('dawn');if(rnd()<.2)await reload().then(async()=>{if(win)await ev('0');});
   if(XY){for(const k of ['erlang','wukong']){const f=k==='wukong'?'wk':'el';if(n[f+'B'])XM[k].used=true;for(const x of n[f+'T']||[]){if(x===tang)continue;const c=kindOf(x);if(!XM[k][c])XM[k][c]=d;}if(!XM[k].awake&&XM[k].A&&XM[k].B&&XM[k].C){XM[k].awake=d;G.awake=(G.awake||0)+1;}const sx=(await st()).xy[k];need(JSON.stringify([sx.A,sx.B,sx.C,sx.usedB,sx.awake])===JSON.stringify([XM[k].A,XM[k].B,XM[k].C,XM[k].used,XM[k].awake]),'treasure '+k);}if(n.gyS)XM.gyUsed=true;if(n.gyB&&!XM.bound)XM.bound=n.gyB;XM.lastZx=n.zx||0;if(d===1)need((await st()).xy.tang===tang,'tang');}
-  X.lg=n.guard||0;X.ld=n.dream||0;X.lc=n.charm||0;if(n.swap)X.sw.push(...n.swap);if(n.anti)X.uA=1;if(n.poison)X.uP=1;if(n.aw)X.awake=d;
+  X.lg=n.guard||0;X.ld=n.dream||0;X.lc=n.charm||0;if(n.swap)X.sw.push(...n.swap);if(n.dance)X.danced.push(...n.dance);if(has('mask'))X.lastMask=n.mkM||0;if(n.anti)X.uA=1;if(n.poison)X.uP=1;if(n.aw)X.awake=d;
   if(n.trade){X.traded=1;if(!isW(n.trade.n))X.lucky={n:n.trade.n,sk:n.trade.sk,used:0};}if(X.lucky&&(n.lcheck||n.lpoison))X.lucky.used=1;if(n.learn&&!X.learn)X.learn={role:deck[n.learn-1]};if(n.mpoison)X.mp=1;if(n.mguard)X.mgd=1;
   if(win)break;
   {const t=await side();for(const x of dl)if(gunNow(x)){const w=`${x}号 ${NAMES[x-1]} ${gName(x)}`;need(t.includes(NG.has(x)?w:w+' 昨夜死亡，可以开枪')&&(!NG.has(x)||new RegExp(w+'[^。]*不可开枪').test(t)),'day gun '+t);G.dayGun=(G.dayGun||0)+1;if(NG.has(x))G.dayNoGun=(G.dayNoGun||0)+1;}}

@@ -12,7 +12,7 @@ const dawnRes = () => { S.n.step = stepsOf().length - 1; render(); return resolv
 try {
  ok('有假面舞会板子', BOARDS.masq && BOARDS.masq.name === '假面舞会' && Object.values(BOARDS.masq.cnt).reduce((a, b) => a + b, 0) === 12);
  ok('身份数', BOARDS.masq.cnt.dancer === 1 && BOARDS.masq.cnt.mask === 1 && BOARDS.masq.cnt.wolf === 3 && BOARDS.masq.cnt.villager === 4 && R.mask.c === 'wolf' && R.dancer.c === 'god');
- startGame('masq'); ok('首夜流程', titles() === '天黑 狼人 女巫 预言家 舞者 假面 白痴 天亮结算', titles());
+ startGame('masq'); ok('首夜流程：假面先确认身份，预言家才验得出', titles() === '天黑 狼人 假面 女巫 预言家 舞者 白痴 天亮结算', titles());
  ok('首夜狼队只有 3 狼', packWant() === 3);
  go('dancerId'); ok('首夜舞者只确认身份', side().includes('从第 2 夜起') && ![...document.querySelectorAll('.side .row span')].some(e => e.textContent === '共舞'));
  night2(); ok('第 2 夜流程', titles() === '天黑 舞者 狼人 假面 女巫 预言家 天亮结算', titles());
@@ -21,7 +21,7 @@ try {
  go('dancer'); ok('舞者要先选 3 人', side().includes('共舞') && !STEPS.dancer().ok);
  pickDance(); ok('选人弹层多选 3 人', sh().includes('舞者与哪三位共舞'));
  [1, 3, 9].forEach(n => pkTap(n)); pkOk(); ok('共舞 3 人', S.n.dance.join() === '1,3,9' && STEPS.dancer().ok);
- ok('少数阵营出局预告', side().includes('好人 2、狼人 1') && side().includes('9号') && side().includes('出局'));
+ ok('少数阵营出局预告', side().includes('狼人 9号；好人 1号、3号') && side().includes('天亮 9号') && side().includes('出局'), side().slice(0, 400));
  ok('座位标“舞”', [...document.querySelectorAll('.seat')][8].textContent.includes('舞'));
  S.n.dance = [1, 2, 5]; ok('同阵营无事', danceOut().out === 0); render(); ok('同阵营提示', side().includes('同阵营'));
  S.n.dance = [9, 10, 5]; ok('2 狼 1 好人：好人出局', danceOut().out === 5);
@@ -29,7 +29,7 @@ try {
  S.n.dance = [1, 5, 9]; go('mask'); ok('假面先询问再戴面具', side().includes('询问') && side().includes('面具') && !STEPS.mask().ok);
  S.n.mkQ = 5; render(); ok('询问在舞池', side().includes('5号：在舞池'));
  S.n.mkQ = 6; render(); ok('询问不在舞池', side().includes('6号：不在舞池'));
- S.n.mkM = 5; render(); ok('面具反转阵营', danceOut().out === 1 && side().includes('5号戴面具'), danceOut());
+ S.n.mkM = 5; render(); ok('面具反转阵营，写明谁戴面具', danceOut().out === 1 && side().includes('5号（戴面具，按狼人算）'), side().slice(0, 500));
  S.n.mkM = 2; ok('面具给舞池外的人无效', danceOut().out === 9);
  S.n.mkM = 12; ok('面具可以给自己', TG.mkM[1](seat(12)));
  S.n.mkM = 9; ok('面具给狼人：变好人阵营', danceOut().out === 0);
@@ -44,6 +44,8 @@ try {
  S.n.poison = null; S.n.dance = [1, 5, 9]; S.n.knife = 9; S.n.anti = true; r = dawnRes(); ok('舞池出局解药救不了', r.D.includes(9) && r.N.some(x => x.includes('舞池结算')), r);
  S.n.anti = false; S.n.knife = 2; S.n.mkQ = 1; S.n.mkM = 5; r = dawnRes(); ok('面具改变结算', r.D.join() === '1,2', r);
  confirmDawn(); close_();
+ ok('全狼共舞戴面具：写明按好人算', (() => { const k = JSON.stringify(S.n); S.n.dance = [9, 10, 11]; S.n.mkM = 11; const t = '舞池结算：' + danceDesc(danceOut()); S.n = JSON.parse(k); return t === '舞池结算：狼人 9号、10号；好人 11号（戴面具，按好人算）'; })());
+ ok('首夜不记舞者、假面', !S.log.some(l => l.t === '第1夜' && /^(舞者|假面)：/.test(l.x)));
  ok('天亮记录共舞与面具', S.log.some(l => l.x === '舞者：共舞 1、5、9号') && S.log.some(l => l.x.startsWith('假面：询问 1号（在舞池）｜面具 5号')), S.log.slice(-8).map(l => l.x));
  ok('记住进过舞池的人', S.danced.join() === '1,5,9' && S.lastMask === 5);
  doExile(0); nextNight(); go('dancer');
