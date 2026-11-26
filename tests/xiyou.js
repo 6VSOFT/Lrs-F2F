@@ -31,12 +31,12 @@ for (let g = 0; g < 120; g++) {
    out.nights++; const n = {wkT: [], elT: []}, A = () => [...alive];
    const boost = k => up('zixia') && n.zx === at(k) && !(k === 'wukong' && n.elC === at('zixia'));
    for (const key of stepsOf()) {
-    const id = k => { if (d === 1) { rb(R[k].n).click(); tap(at(k)); } };
+    const id = () => {};
+    if (key === 'ids') { for (const k of ['zixia', 'erlang', 'wukong', 'guanyin', 'heixiong']) { if (B('下一步')) throw Error('身份没录完可下一步'); rb(R[k].n).click(); tap(at(k)); } rb('天兵 ').click(); deck.forEach((k, i) => { if (k === 'tianbing') tap(i + 1); }); B('确定').click(); if (!side().includes(`唐僧是 ${tang}号`)) throw Error('唐僧提示'); }
     if (key === 'dawn') break;
     if (key === 'zixia') { id('zixia'); if (up('zixia')) { rb('加持').click(); n.zx = pick(A().filter(x => x !== M.lastZx)); tap(n.zx); } }
     if (key === 'wolf') {
-     if (d === 1) { rb('狼人 ').click(); deck.forEach((k, i) => { if (k === 'tianbing') tap(i + 1); }); B('确定').click(); }
-     const pack = A().some(x => deck[x - 1] === 'tianbing') || (up('erlang') && woke('erlang', d));
+     const pack = A().some(x => deck[x - 1] === 'tianbing') || (up('erlang') && (n.elW !== undefined ? n.elW : woke('erlang', d)));
      rb('刀口').click(); if (!pack || Math.random() < .1) { none(); n.knife = 0; } else { n.knife = pick(A()); tap(n.knife); }
      if (!pack && d > 1) ok('天兵全灭提示', side().includes('二郎神觉醒前不能刀人'));
     }
@@ -172,7 +172,7 @@ try {
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, awake: 1}); nightN({}); ok('觉醒二郎神入狼队', inPack(seat(9)));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜提示得 C', side().includes('得 C')); S.n.step = stepsOf().length - 1; dawn(); ok('集齐后觉醒', S.xy.erlang.awake === 2 && S.log.some(l => l.x.includes('集齐三件宝物')));
  ok('次夜仍觉醒', (nightN({}), woke('erlang')));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && !inPack(seat(9)));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && inPack(seat(9)));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5], elB: 6}); dawn(); ok('当夜觉醒三尖两刃刀杀任意人', dead(6));
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [5], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 0, C: 1}); nightN({wkT: [3], wkB: 6}); dawn(); ok('当夜寻到定海神针并觉醒即杀任意人', dead(6) && S.xy.wukong.usedB);
@@ -186,9 +186,11 @@ try {
  setup(); S.xy.erlang.C = 1; nightN({zx: 9, elC: 2}); ok('紫霞加持二郎神不受封印影响', picks('erlang') === 2);
  setup(D0, {zx: 4}); dawn(); nightN({}); S.n.step = stepsOf().indexOf('zixia'); render(); rb('加持').click(); ok('紫霞不能连续点同一人', pkb(4).disabled); close_();
  // 哮天犬
- ok('夜间顺序', stepsOf().join(' ').includes('zixia wolf guanyin erlang wukong heixiong'), stepsOf());
+ ok('夜间顺序', stepsOf().join(' ') === 'close zixia erlang wukong wolf guanyin heixiong dawn', stepsOf());
+ close_(); startGame('xiyou'); ok('首夜先确认身份', [].concat(BOARDS.xiyou.n1).join(' ') === 'close ids zixia erlang wukong wolf guanyin heixiong sheriff dawn'); S.n.step = 1; render(); ok('身份没录完不能下一步', !B('下一步') && side().includes('天兵 0/3'));
+ setup(); S.n.step = stepsOf().indexOf('wukong'); render(); ok('第二轮不再录身份', !rowOf('孙悟空') && !side().includes('请确认你的身份')); S.n.step = stepsOf().indexOf('wolf'); render(); ok('第二轮天兵不再录身份', !rowOf('天兵 ') && side().includes('天兵请睁眼'));
  setup(); S.xy.erlang.C = 1; nightN({elC: 4}); S.n.step = stepsOf().indexOf('heixiong'); render(); ok('哮天犬封印黑熊精', side().includes('被哮天犬封印') && !document.querySelector('.side .res'));
- setup(); S.xy.erlang.C = 1; nightN({elC: 3, gyB: 6}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('观音先行动，封印无效', !side().includes('被哮天犬封印') && !rb('收服').disabled); S.n.step = stepsOf().length - 1; dawn(); ok('观音照常收服', S.xy.bound === 6);
+ setup(); S.xy.erlang.C = 1; nightN({elC: 3, gyB: 6}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('哮天犬封印观音', side().includes('被哮天犬封印') && rb('收服').disabled); S.n.step = stepsOf().length - 1; dawn(); ok('被封印不能收服', !S.xy.bound);
  setup(); S.xy.erlang.C = 1; nightN({}); S.n.step = stepsOf().indexOf('erlang'); render(); rb('哮天犬').click(); ok('哮天犬不能选大圣', pkb(1).disabled); close_();
  // 黑熊精与唐僧反转
  setup('wukong villager heixiong tianbing guanyin zixia villager villager erlang villager tianbing tianbing'.split(' ')); ok('唐僧在黑熊精旁', S.xy.tang === 2);

@@ -15,7 +15,7 @@ const FLOW={hybrid:['天黑 混血儿 狼人 女巫 预言家 猎人 白痴 警�
 wkguard:['天黑 守卫 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 天亮结算'],demon:['天黑 守卫 狼人 女巫 预言家 猎人 恶魔 警长 天亮结算','天黑 守卫 狼人 女巫 预言家 猎人 恶魔 天亮结算'],
 beauty:['天黑 守卫 狼人 狼美人 女巫 预言家 骑士 警长 天亮结算','天黑 守卫 狼人 狼美人 女巫 预言家 天亮结算'],magician:['天黑 魔术师 狼人 女巫 预言家 猎人 狼王 警长 天亮结算','天黑 魔术师 狼人 女巫 预言家 猎人 狼王 天亮结算'],
 bros:['天黑 黑市商人 守卫 狼兄狼弟 狼人 女巫 预言家 幸运儿 警长 天亮结算','天黑 黑市商人 守卫 狼弟 狼人 女巫 预言家 幸运儿 天亮结算'],wkdream:['天黑 摄梦人 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],
-gargoyle:['天黑 狼人 女巫 石像鬼 预言家 猎人 守墓人 石像鬼查验 警长 天亮结算','天黑 石像鬼查验 狼人 女巫 预言家 猎人 守墓人 天亮结算'],mech:['天黑 守卫 狼人 女巫 猎人 通灵师 机械狼 通灵师查验 警长 天亮结算','天黑 守卫 机械狼 狼人 女巫 通灵师查验 猎人 机械狼状态 天亮结算'],
+gargoyle:['天黑 狼人 女巫 石像鬼 预言家 猎人 守墓人 石像鬼查验 警长 天亮结算','天黑 石像鬼查验 狼人 女巫 预言家 猎人 守墓人 天亮结算'],mech:['天黑 第一轮：确认身份 守卫 机械狼 狼人 女巫 通灵师查验 猎人 警长 天亮结算','天黑 守卫 机械狼 狼人 女巫 通灵师查验 猎人 机械狼状态 天亮结算'],
 nightmare:['天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 警长 天亮结算','天黑 噩梦之影 摄梦人 狼人 女巫 预言家 猎人 天亮结算'],blood:['天黑 狼人 女巫 预言家 猎魔人 白痴 警长 天亮结算','天黑 狼人 女巫 预言家 猎魔人 天亮结算']};
 const W=['wolf','wolfking','demon','beauty','elder','younger','gargoyle','mechwolf','nightmare','bloodmoon'];
 const out={};
@@ -32,7 +32,8 @@ for(const bd of Object.keys(FLOW)){
    const seen=[];
    for(const key of stepsOf()){
     seen.push(document.querySelector('.wh .lbl').textContent.split('·').pop().trim());
-    const id=k=>{if(d===1){rb(R[k].n).click();tap(at(k));}};
+    const id=k=>{if(d===1&&!BOARDS[bd].ids){rb(R[k].n).click();tap(at(k));}};
+    if(key==='ids'){const B0=BOARDS[bd];for(const k of B0.ids){if(B('下一步'))throw Error('ids next');if(B0.pack.includes(k)){rb((B0.wn||'狼人')+' ').click();deck.forEach((x,i)=>{if(B0.pack.includes(x))tap(i+1);});B('确定').click();}else{rb(R[k].n).click();tap(at(k));}}if(!B('下一步'))throw Error('ids done');}
     const T2=(label,field,list,o={})=>{const b=rb(label);if(!b||b.disabled)throw Error('no row '+label+' '+key);b.click();if(o.none&&Math.random()<(o.p||.3)){none();n[field]=0;}else{n[field]=pick(list);tap(n[field]);}};
     if(key==='dawn')break;
     if(key==='hybrid'){id('hybrid');rb('榜样').click();tap(pick(A.filter(x=>x!==at('hybrid'))));}
@@ -44,7 +45,7 @@ for(const bd of Object.keys(FLOW)){
     if(key==='bros'){id('elder');id('younger');}
     if(key==='younger'){const aw=!alive.has(at('elder'))&&up('younger')&&X.awake===null;if(aw){T2('狼弟刀','bknife',A);n.aw=1;}else if(rb('狼弟刀'))throw Error('younger open');}
     if(key==='wolf'){
-     if(d===1){rb('狼人 ').click();deck.forEach((k,i)=>{if(packR.includes(k)){const b=pkb(i+1);if(!b.classList.contains('cur'))tap(i+1);}});B('确定').click();const m=BOARDS[bd].mark;if(m)id(m);}
+     if(d===1&&!BOARDS[bd].ids){rb('狼人 ').click();deck.forEach((k,i)=>{if(packR.includes(k)){const b=pkb(i+1);if(!b.classList.contains('cur'))tap(i+1);}});B('确定').click();const m=BOARDS[bd].mark;if(m)id(m);}
      const pf=n.fear&&(packR.includes(deck[n.fear-1])||(d>1&&deck[n.fear-1]==='nightmare'));
      if(pf){if(!rb('刀口').disabled)throw Error('fear pack open');n.knife=0;}else T2('刀口','knife',A.filter(x=>deck[x-1]!=='beauty'),{none:1,p:.1});}
     if(key==='beauty'){id('beauty');if(up('beauty'))T2('魅惑','charm',A.filter(x=>x!==at('beauty')&&x!==X.lc),{none:1});}

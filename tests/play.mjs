@@ -156,8 +156,9 @@ async function game(bd){
   const list=steps(bd)(d);
   for(let i=0;i<list.length;i++){const key=list[i];
    const head=await ev("document.querySelector('.wh .lbl').textContent");need(head.includes(`${i+1}/${list.length}`),'step '+head);
-   const ident=async k=>{if(d===1){await rb(R[k].n);await pk(at(k));}};
+   const ident=async k=>{if(d===1&&!BOARDS[bd].ids){await rb(R[k].n);await pk(at(k));}};
    if(key==='dawn')break;
+   if(key==='ids'){const B0=BOARDS[bd],wn=B0.wn||'狼人';for(const k of B0.ids){need(!await ev("!!Q.btn('下一步')"),'ids next');if(B0.pack.includes(k)){await rb(wn+' ');for(let j=0;j<12;j++)if(B0.pack.includes(deck[j]))await pk(j+1);await btn('确定');}else{await rb(R[k].n);await pk(at(k));}}need(!!await ev("!!Q.btn('下一步')"),'ids done');if(XY)need((await ev('document.querySelector(".side").textContent')).includes(`唐僧是 ${tang}号`),'tang note');G.ids=(G.ids||0)+1;}
    if(key==='hybrid'){await ident('hybrid');await rb('榜样');await pk(pick(A.filter(x=>x!==at('hybrid'))));}
    if(key==='guard'){await ident('guard');if(can('guard'))await T2('守护','guard',A.filter(x=>x!==X.lg),{none:1});else need(!await en('守护'),'guard open');}
    if(key==='dreamer'){await ident('dreamer');if(can('dreamer'))await T2('摄梦','dream',A.filter(x=>x!==at('dreamer')));else need(!await en('摄梦'),'dream open');}
@@ -167,7 +168,7 @@ async function game(bd){
    if(key==='bros'){await ident('elder');await ident('younger');}
    if(key==='younger'){const aw=!alive.has(at('elder'))&&up('younger')&&X.awake===null;if(aw){await T2('狼弟刀','bknife',A);n.aw=1;}else need(!await ev("!!Q.rb('狼弟刀')"),'younger open');}
    if(key==='wolf'){
-    if(d===1){await rb('狼人 ');for(let j=0;j<12;j++)if(packR.includes(deck[j])&&!await ev(`Q.pk(${j+1}).classList.contains('cur')`))await pk(j+1);await btn('确定');const m=BOARDS[bd].mark;if(m)await ident(m);}
+    if(d===1&&!BOARDS[bd].ids){await rb('狼人 ');for(let j=0;j<12;j++)if(packR.includes(deck[j])&&!await ev(`Q.pk(${j+1}).classList.contains('cur')`))await pk(j+1);await btn('确定');const m=BOARDS[bd].mark;if(m)await ident(m);}
     const pf=n.fear&&(packR.includes(deck[n.fear-1])||(d>1&&deck[n.fear-1]==='nightmare'));
     if(pf){need(!await en('刀口'),'fear pack open');n.knife=0;}else await T2('刀口','knife',A.filter(x=>deck[x-1]!=='beauty'),{none:1,p:.08});}
    if(key==='beauty'){await ident('beauty');if(up('beauty'))await T2('魅惑','charm',A.filter(x=>x!==at('beauty')&&x!==X.lc),{none:1});}
