@@ -1,4 +1,4 @@
-const VER='v30'; // 与 sw.js 的版本号一致
+const VER='v31'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -462,7 +462,7 @@ const STEPS={
  sheriff:()=>({t:'警长',say:'“要竞选警长的玩家请举手。”<br>（记录上警号码）<br>“请放下。”',body:row('上警',S.police.length?S.police.join('、')+'号':'<i>未录入</i>','选择','pickPolice()')+note('可不录入，天亮后在白天面板继续：退水、投票、当选。')}),
  ...XYSTEPS,
  ids:()=>{const bd=BD(),wn=bd.wn||'狼人',pk=k=>bd.pack.includes(k),ws=S.seats.filter(s=>pk(s.role)).map(s=>s.n),wt=packWant(),t=S.board==='xiyou'&&XY().tang,nv=cntOf('villager');
-  return {t:'第一轮：确认身份',say:'“第一轮，确认身份。”<br>'+bd.ids.map(k=>pk(k)?`“${wn}请睁眼，互相确认。”……“请闭眼。”`:`${eye(k)}”……“请闭眼。”`).join('<br>'),
+  return {t:'第一轮：确认身份',say:'“第一轮，确认身份。”'+bd.ids.map(k=>`<span class="ln" data-sp="${k}">${spkBtn(k)}${pk(k)?`“${wn}请睁眼，互相确认。”……“请闭眼。”`:`${eye(k)}”……“请闭眼。”`}</span>`).join(''),
    body:bd.ids.map(k=>pk(k)?row(`${wn} ${ws.length}/${wt}`,ws.length?ws.join('、')+'号':'<i>未录入</i>','选择','pickWolves()'):idRow1(k)).join('')+
     (t?note(`唐僧是 ${t}号（离孙悟空最近的平民，本人不知道）。`):'')+note(`先录全部身份，其余 ${nv} 人自动记为平民；第二轮再按顺序发动技能。`),
    ok:ws.length===wt&&bd.ids.every(k=>pk(k)||!!one(k))};},
@@ -478,7 +478,7 @@ function wizard(){
  const key=st[S.n.step],x=STEPS[key](),ok=x.ok===undefined||x.ok;
  const dots=st.map((k,i)=>`<i class="${i<S.n.step?'d':i===S.n.step?'c':''}"></i>`).join('');
  return `<div class="wiz ${S.hide&&key!=='close'&&key!=='sheriff'?'mask':''}"><div class="wh"><span class="lbl"><small>${label()} · ${S.n.step+1}/${total}<span class="sr"> · </span></small><b>${x.t}</b></span><div class="dots">${dots}</div></div>
-  ${say(x.say)}${TTS?`<div class="spk"><button class="btn" onclick="speak()">${ic('vol')} 朗读口令</button></div>`:''}${x.body}
+  ${say(x.say)}${TTS?`<div class="spk">${spkBtn('step','口令')}</div>`:''}${x.body}
   <div class="wf"><button class="btn" ${S.n.step?'':'disabled'} onclick="upd(()=>S.n.step--)">← 上一步</button>
   ${key==='dawn'?`<button class="btn pri" style="flex:2" onclick="adv(confirmDawn)">确认 · 天亮 →</button>`:`<button class="btn pri" style="flex:2" ${ok?'':'disabled'} onclick="adv(()=>upd(()=>S.n.step++))">下一步 →</button>`}</div></div>`;
 }
@@ -1090,14 +1090,31 @@ function doImport(){const d=window._bk;if(!d)return;window._bk=null;
 const TTS=!!(window.speechSynthesis&&window.SpeechSynthesisUtterance),RATES=[.8,1,1.2,1.4];
 let voiceOn=false,voiceRate=1,spoke='',booted=false;
 function loadPrefs(){try{dimOn=localStorage.getItem('lrs-dim')!=='0';wakeOn=localStorage.getItem('lrs-wake')!=='0';voiceOn=localStorage.getItem('lrs-voice')==='1';const r=+localStorage.getItem('lrs-voice-rate');voiceRate=RATES.includes(r)?r:1;}catch(e){}}
-function sayText(){const e=$('.wiz .say');if(!e)return '';const c=e.cloneNode(true);
+// 朗读：按一次播放，再按一次暂停，再按继续。暂停用“记住念到哪、停掉、从那里接着念”，各家浏览器都可靠
+let sp={key:'',text:'',pos:0,state:'idle',u:null};
+function spText(key){const e=key==='step'?$('.wiz .say'):$(`.wiz .say [data-sp="${key}"]`);if(!e)return '';const c=e.cloneNode(true);
+ c.querySelectorAll('button').forEach(b=>b.remove());if(key==='step')c.querySelectorAll('.ln').forEach(l=>l.append('\n'));
  c.querySelectorAll('em.k').forEach(x=>x.textContent='这名');c.querySelectorAll('br').forEach(b=>b.replaceWith('\n'));
  return c.textContent.replace(/（[^）]*）/g,'').replace(/[“”]/g,'').replace(/……/g,'，').replace(/\s+/g,' ').trim();}
-function speak(){if(!TTS)return;const t=sayText();speechSynthesis.cancel();if(!t)return;
+const sayText=()=>spText('step');
+const spkLbl=key=>sp.key===key&&sp.state==='playing'?'暂停':sp.key===key&&sp.state==='paused'?'继续':'朗读';
+function spkBtn(key,what){if(!TTS)return '';const l=spkLbl(key);return `<button class="btn sb ${l!=='朗读'?'on':''}" data-spk="${key}" onclick="spkTap('${key}')" aria-label="${l}${what||R[key]?.n||''}">${ic('vol')} ${l}${what&&l==='朗读'?what:''}</button>`;}
+function drawSpk(){document.querySelectorAll('[data-spk]').forEach(b=>{const k=b.dataset.spk,l=spkLbl(k),w=k==='step'?'口令':'';b.innerHTML=`${ic('vol')} ${l}${w&&l==='朗读'?w:''}`;b.classList.toggle('on',l!=='朗读');});}
+function spPlay(t,base){const old=sp.u;sp.u=null;if(old||speechSynthesis.speaking)speechSynthesis.cancel();if(!t){sp.state='idle';return drawSpk();}
  const vs=speechSynthesis.getVoices(),v=vs.find(x=>/^zh[-_](CN|Hans)/i.test(x.lang))||vs.find(x=>/^zh/i.test(x.lang)),u=new SpeechSynthesisUtterance(t);
- u.lang='zh-CN';u.rate=voiceRate;if(v)u.voice=v;window._said=t;speechSynthesis.speak(u);}
-function autoSpeak(){if(home||!S.night)return;const k=S.id+'|'+S.day+'|'+S.n.step;if(k===spoke)return;spoke=k;if(booted&&TTS&&voiceOn)speak();} // 刚打开页面不自动念（浏览器也不允许）
-function togVoice(){voiceOn=!voiceOn;try{localStorage.setItem('lrs-voice',voiceOn?'1':'0');}catch(e){}if(TTS&&!voiceOn)speechSynthesis.cancel();openMenu();if(voiceOn)toast('已开启：每到新的一步自动朗读');}
+ u.lang='zh-CN';u.rate=voiceRate;if(v)u.voice=v;
+ u.onboundary=e=>{if(sp.u===u)sp.pos=base+(e.charIndex||0);};
+ u.onend=u.onerror=()=>{if(sp.u===u){sp.u=null;sp.state='idle';sp.pos=0;drawSpk();}};
+ sp.u=u;sp.state='playing';window._said=t;speechSynthesis.speak(u);drawSpk();}
+function spStop(){const u=sp.u;sp.u=null;sp.state='idle';sp.pos=0;if(u)speechSynthesis.cancel();drawSpk();}
+function spkTap(key){if(!TTS)return;
+ if(sp.key===key&&sp.state==='playing'){const u=sp.u;sp.u=null;sp.state='paused';if(u)speechSynthesis.cancel();return drawSpk();}
+ if(sp.key===key&&sp.state==='paused')return spPlay(sp.text.slice(sp.pos),sp.pos);
+ sp.key=key;sp.text=spText(key);sp.pos=0;spPlay(sp.text,0);}
+function speak(){if(!TTS)return;sp.key='step';sp.text=sayText();sp.pos=0;spPlay(sp.text,0);}
+// 换到新的一步：先停掉上一步的朗读；开启自动播报时念新的一步（刚打开页面不自动念，浏览器也不允许）
+function autoSpeak(){if(home||!S.night){if(sp.state!=='idle'&&TTS)spStop();return;}const k=S.id+'|'+S.day+'|'+S.n.step;if(k===spoke)return;spoke=k;if(!TTS)return;if(booted&&voiceOn)speak();else if(sp.state!=='idle')spStop();}
+function togVoice(){voiceOn=!voiceOn;try{localStorage.setItem('lrs-voice',voiceOn?'1':'0');}catch(e){}if(TTS&&!voiceOn)spStop();openMenu();if(voiceOn)toast('已开启：每到新的一步自动朗读');}
 function voiceRateNext(){voiceRate=RATES[(RATES.indexOf(voiceRate)+1)%RATES.length];try{localStorage.setItem('lrs-voice-rate',String(voiceRate));}catch(e){}openMenu();}
 
 /* ---------- 西游杀状态面板 ---------- */

@@ -46,7 +46,7 @@ try {
  const said = []; const ss = window.speechSynthesis;
  ok('浏览器支持语音', TTS === !!ss);
  if (ss) {
-  ss.speak = u => said.push(u.text); ss.cancel = () => {};
+  const uts = []; let cancels = 0; ss.speak = u => { said.push(u.text); uts.push(u); }; ss.cancel = () => { cancels++; };
   startGame('std'); 'seer witch hunter idiot villager villager villager villager wolf wolf wolf wolf'.split(' ').forEach((k, i) => S.seats[i].role = k); S.n.knife = 5;
   S.n.step = stepsOf().indexOf('witch'); settle(); close_();
   ok('口令下有朗读按钮', !!document.querySelector('.spk button'));
@@ -62,6 +62,26 @@ try {
   document.querySelector('.wf .btn').click(); ok('上一步也念', said.length === 2 && said[1].includes('猎人'), said);
   openMenu(); SB('播报语速').click(); ok('语速可调', voiceRate === 1.2 && localStorage.getItem('lrs-voice-rate') === '1.2'); SB('播报语速').click(); SB('播报语速').click(); ok('语速循环', voiceRate === .8); SB('播报语速').click();
   SB('口令语音播报').click(); ok('菜单关闭播报', !voiceOn && localStorage.getItem('lrs-voice') === '0'); close_();
+  // 按一次播放、再按暂停、再按继续
+  const sb = () => document.querySelector('.spk button');
+  S.n.step = stepsOf().indexOf('witch'); render(); said.length = 0; spStop();
+  sb().click(); const full = said.at(-1); ok('按一次播放', said.length === 1 && sb().textContent.includes('暂停'));
+  uts.at(-1).onboundary({charIndex: 6}); const c0 = cancels; sb().click(); ok('再按一次暂停', said.length === 1 && sb().textContent.includes('继续') && cancels > c0);
+  sb().click(); ok('再按从暂停处继续', said.length === 2 && said[1] === full.slice(6) && sb().textContent.includes('暂停'), said);
+  uts.at(-1).onboundary({charIndex: 3}); sb().click(); sb().click(); ok('第二次暂停后接着念', said[2] === full.slice(9), said);
+  uts.at(-1).onend(); ok('念完按钮复原', sb().textContent.includes('朗读口令'));
+  sb().click(); ok('念完再按从头念', said.at(-1) === full);
+  document.querySelector('.wf .btn').click(); ok('换步停止朗读', sp.state === 'idle' && sb().textContent.includes('朗读口令'));
+  // 第一轮：每个身份一个朗读按钮
+  startGame('xiyou'); S.n.step = 1; render(); said.length = 0;
+  const lb = [...document.querySelectorAll('.say .ln .sb')];
+  ok('第一轮每个身份一个朗读按钮', lb.length === 6 && lb.map(b => b.dataset.spk).join() === BOARDS.xiyou.ids.join());
+  lb[0].click(); ok('只念这个身份', said[0] && said[0].includes('紫霞仙子请睁眼') && said[0].includes('请闭眼') && !said[0].includes('二郎神'), said);
+  ok('这个身份的按钮变暂停', document.querySelector('[data-spk="zixia"]').textContent.includes('暂停') && document.querySelector('[data-spk="erlang"]').textContent.includes('朗读'));
+  document.querySelector('[data-spk="zixia"]').click(); ok('再按暂停', document.querySelector('[data-spk="zixia"]').textContent.includes('继续'));
+  document.querySelector('[data-spk="erlang"]').click(); ok('换按别的身份从头念它', said.at(-1).includes('二郎神请睁眼') && !said.at(-1).includes('紫霞') && document.querySelector('[data-spk="zixia"]').textContent.includes('朗读'), said);
+  sb().click(); const all = said.at(-1); ok('整段口令按顺序念全部身份、不念按钮字', all.includes('第一轮') && all.includes('紫霞仙子请睁眼') && all.includes('黑熊精请睁眼') && !all.includes('朗读'), all);
+  spStop(); startGame('mech'); S.n.step = 1; render(); ok('机械狼板第一轮也有', document.querySelectorAll('.say .ln .sb').length === 6);
   startGame('std'); S.night = false; render(); ok('白天没有朗读按钮', !document.querySelector('.spk'));
  }
 
