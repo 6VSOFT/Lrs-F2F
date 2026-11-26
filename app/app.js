@@ -115,7 +115,7 @@ const seatsOf=k=>S.seats.filter(s=>s.role===k);
 const one=k=>seatsOf(k)[0];
 const seat=n=>S.seats[n-1];
 const isWolf=s=>!!(s&&s.role&&R[s.role].c==='wolf');
-const inPack=s=>isWolf(s)&&(BD().pack.includes(s.role)||(s.role==='erlang'&&woke('erlang'))||(s.role==='nightmare'&&S.day>1)||(s.role==='younger'&&S.awakeDay!==null&&S.awakeDay<S.day));
+const inPack=s=>isWolf(s)&&(BD().pack.includes(s.role)||(s.role==='erlang'&&wokeOld('erlang'))||(s.role==='nightmare'&&S.day>1)||(s.role==='younger'&&S.awakeDay!==null&&S.awakeDay<S.day));
 const XY=()=>S.xy;
 const wokeOld=k=>!!S.xy[k].awake&&S.xy[k].awake<S.day; // 之前的夜晚已觉醒
 const woke=k=>wokeOld(k)||(S.night&&!S.xy[k].awake&&'ABC'.split('').every(c=>owns(k,c))); // 今晚集齐也当夜觉醒
@@ -414,7 +414,7 @@ const STEPS={
   return {t:wn,say:(S.day===1&&!BD().ids?'“狼人请睁眼，请确认彼此身份。'+(mk?R[mk].n+'请举手示意。':'')+'今晚你们要袭击谁？请统一意见。”<br>（狼人比划号码，法官确认落刀目标）':`“${wn}请睁眼。今晚袭击谁？”`)+`<br>“${wn}请闭眼。”`,
    body:(S.day===1&&!BD().ids?row(`狼人 ${ws.length}/${wt}`,ws.length?ws.join('、')+'号':'<i>未录入</i>','选择','pickWolves()')+(mk?row(R[mk].n,val(m&&m.n),'选择',`pickOne('${mk}')`,ws.length!==wt):''):'')+
     (S.board==='xiyou'&&!alive&&S.day>1?note('天兵已全部出局，二郎神觉醒前不能刀人：选“空刀”。'):S.day>1&&!alive?note(solo.length?`狼队已全部出局，${solo.map(s=>R[s.role].n).join('、')}带刀（比划手势告知）。`:'狼队已全部出局，选“空刀”。'):'')+
-    (S.board==='xiyou'&&woke('erlang')?note('二郎神已觉醒，与天兵一起商量刀人。'):'')+note(S.board==='xiyou'?'天庭阵营全局不能自爆。':'').replace('<div class="note"></div>','')+(pf?note('狼队有人被恐惧，今夜不能刀人。'):'')+tgt('刀口','knife',{none:'空刀',dis:pf}),
+    (S.board==='xiyou'&&wokeOld('erlang')?note('二郎神已觉醒，与天兵一起商量刀人。'):'')+note(S.board==='xiyou'?'天庭阵营全局不能自爆。':'').replace('<div class="note"></div>','')+(pf?note('狼队有人被恐惧，今夜不能刀人。'):'')+tgt('刀口','knife',{none:'空刀',dis:pf}),
    ok:S.n.knife!==null&&(S.day>1||!!BD().ids||(ws.length===wt&&(!mk||!!m)))};},
  beauty:()=>{const b=blocked('beauty');return {t:'狼美人',say:eye('beauty')+'今晚你要魅惑谁？”<br>（比划号码）'+shut('beauty'),
   body:idRow('beauty')+blkNote('beauty')+tgt('魅惑','charm',{none:'不魅惑',dis:b})+note(`狼美人出局时，被魅惑者一同殉情且不能发动技能；被骑士决斗出局则不触发。不能连续两夜魅惑同一人${S.lastCharm?`（昨夜魅惑 ${S.lastCharm}号）`:''}，不能自刀、自爆。`),ok:has('beauty')&&(!!b||S.n.charm!==null)};},

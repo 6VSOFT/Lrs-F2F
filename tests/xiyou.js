@@ -36,7 +36,7 @@ for (let g = 0; g < 120; g++) {
     if (key === 'dawn') break;
     if (key === 'zixia') { id('zixia'); if (up('zixia')) { rb('加持').click(); n.zx = pick(A().filter(x => x !== M.lastZx)); tap(n.zx); } }
     if (key === 'wolf') {
-     const pack = A().some(x => deck[x - 1] === 'tianbing') || (up('erlang') && (n.elW !== undefined ? n.elW : woke('erlang', d)));
+     const pack = A().some(x => deck[x - 1] === 'tianbing') || (up('erlang') && woke('erlang', d));
      rb('刀口').click(); if (!pack || Math.random() < .1) { none(); n.knife = 0; } else { n.knife = pick(A()); tap(n.knife); }
      if (!pack && d > 1) ok('天兵全灭提示', side().includes('二郎神觉醒前不能刀人'));
     }
@@ -172,7 +172,8 @@ try {
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, awake: 1}); nightN({}); ok('觉醒二郎神入狼队', inPack(seat(9)));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜提示得 C', side().includes('得 C')); S.n.step = stepsOf().length - 1; dawn(); ok('集齐后觉醒', S.xy.erlang.awake === 2 && S.log.some(l => l.x.includes('集齐三件宝物')));
  ok('次夜仍觉醒', (nightN({}), woke('erlang')));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && inPack(seat(9)));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && !inPack(seat(9)));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); S.seats[9].dead = S.seats[10].dead = S.seats[11].dead = 'exile'; nightN({elT: [5]}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('当夜觉醒不加入当夜刀人', side().includes('二郎神觉醒前不能刀人')); dawn(); nightN({}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('下一夜加入刀人', inPack(seat(9)) && side().includes('二郎神已觉醒'));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5], elB: 6}); dawn(); ok('当夜觉醒三尖两刃刀杀任意人', dead(6));
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [5], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 0, C: 1}); nightN({wkT: [3], wkB: 6}); dawn(); ok('当夜寻到定海神针并觉醒即杀任意人', dead(6) && S.xy.wukong.usedB);
