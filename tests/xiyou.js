@@ -90,7 +90,7 @@ for (let g = 0; g < 120; g++) {
     const a = S.seats.filter(s => !s.dead).map(s => s.n).join(), e = [...alive].sort((x, y) => x - y).join();
     if (a !== e) throw Error(`${w} 存活 ${a} 期望 ${e} ${JSON.stringify(n)} ${deck}`);
     const nw = [...alive].filter(isW).length, nv = [...alive].filter(x => deck[x - 1] === 'villager').length, ng = alive.size - nw - nv;
-    const wolf = !ng || !nv || !alive.has(wk), good = !nw || !alive.has(el);
+    const wolf = !ng || !nv, good = !nw;
     if (M.win === 'wolf' && !wolf || M.win === 'good' && !good) M.win = null;
     if (!M.win) M.win = wolf ? 'wolf' : good ? 'good' : null;
     if ((S.win ? S.win.side : null) !== M.win) throw Error(`${w} 胜负 ${JSON.stringify(S.win)} 期望 ${M.win}`);
@@ -150,7 +150,7 @@ try {
  nightN({knife: 6}); S.n.step = stepsOf().indexOf('guanyin'); render(); ok('甘露水只能用一次', !B('使用')); S.n.step = stepsOf().length - 1; dawn(); ok('第二次刀死', dead(6));
  // 镇魔圈
  setup(); S.xy.wukong.C = 1; nightN({knife: 2, wkC: 1}); dawn(); ok('镇魔圈护左右（12-1-2）', !dead(2));
- setup(); S.xy.wukong.C = 1; nightN({knife: 1, wkC: 12}); dawn(); ok('镇魔圈不护孙悟空自己', dead(1) && S.win && S.win.why === '齐天大圣出局');
+ setup(); S.xy.wukong.C = 1; nightN({knife: 1, wkC: 12}); dawn(); ok('镇魔圈不护孙悟空自己', dead(1));
  setup(); S.xy.wukong.C = 1; S.seats[5].dead = 'exile'; S.seats[5].at = '第0天'; nightN({knife: 7, wkC: 6}); dawn(); ok('死者也占位', !dead(7));
  setup(); nightN({wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('当夜寻到即可用', !!rowOf('镇魔圈') && side().indexOf('得 C') < side().indexOf('镇魔圈'));
  setup(); nightN({wkT: [5], wkC: 6, knife: 6}); dawn(); ok('当夜寻到的镇魔圈当夜生效', !dead(6) && S.xy.wukong.C === 2);
@@ -158,10 +158,10 @@ try {
  setup(); nightN({wkC: 6, knife: 6}); dawn(); ok('没寻到不能用', dead(6));
  setup(); S.xy.wukong.C = 1; nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('第 2 夜可用第 1 夜的宝物', !!rowOf('镇魔圈'));
  // 击杀宝物
- setup(); S.xy.erlang.B = 1; nightN({elB: 1}); dawn(); ok('三尖两刃刀点中大圣', dead(1) && S.win.side === 'wolf');
+ setup(); S.xy.erlang.B = 1; nightN({elB: 1}); dawn(); ok('三尖两刃刀点中大圣', dead(1) && !S.win);
  setup(); S.xy.erlang.B = 1; nightN({elB: 5}); dawn(); ok('三尖两刃刀点错无效', !dead(5) && S.xy.erlang.usedB && S.log.some(l => l.x.includes('没有点中')));
  nightN({}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('B 只能用一次', !rowOf('三尖两刃刀'));
- setup(); S.xy.wukong.B = 1; nightN({wkB: 9}); dawn(); ok('定海神针点中二郎神', dead(9) && S.win.side === 'good' && S.win.why === '二郎神出局');
+ setup(); S.xy.wukong.B = 1; nightN({wkB: 9}); dawn(); ok('定海神针点中二郎神', dead(9) && !S.win);
  setup(); S.xy.wukong.B = 1; nightN({wkB: 10}); dawn(); ok('定海神针点错无效', !dead(10));
  setup(); S.xy.erlang.B = 1; S.xy.wukong.C = 1; nightN({elB: 1, wkC: 2}); dawn(); ok('镇魔圈不挡砍大圣（不护自己）', dead(1));
  // 觉醒
@@ -214,7 +214,10 @@ try {
  close_(); S.v = null; doBadge(4); rb('投票明细').click(); vc(9); vv(5); vc(10); vv(6); vv(7); ok('唐僧当警长算 2 票', document.querySelector('#sheet .pkf .pri').textContent.startsWith('平票'));
  close_(); S.v = null;
  // 胜负与自爆
- setup(D0, {knife: 1}); dawn(); ok('大圣出局狼人胜', S.win.side === 'wolf' && S.win.why === '齐天大圣出局');
+ setup(D0, {knife: 1}); dawn(); ok('孙悟空出局不直接判胜', dead(1) && !S.win);
+ setup(); S.seats[1].dead = S.seats[2].dead = S.seats[3].dead = 'exile'; nightN({knife: 1}); dawn(); ok('神职全灭狼胜', S.win && S.win.side === 'wolf' && S.win.why === '神职全体出局');
+ setup(); S.seats[4].dead = S.seats[5].dead = S.seats[6].dead = 'exile'; nightN({knife: 8}); dawn(); ok('平民（含唐僧）全灭狼胜', S.win && S.win.side === 'wolf' && S.win.why === '平民全体出局');
+ setup(); S.seats[9].dead = S.seats[10].dead = S.seats[11].dead = 'exile'; S.xy.wukong.B = 1; nightN({wkB: 9}); dawn(); ok('狼人（含二郎神）全灭好人胜', S.win && S.win.side === 'good' && S.win.why === '狼人全体出局');
  setup(); dawn(); pickBoom(); ok('天庭不能自爆', [...document.querySelectorAll('.pk button')].every(b => b.disabled)); close_();
  setup(); S.seats[9].dead = S.seats[10].dead = S.seats[11].dead = 'exile'; settle(); ok('天兵全灭未判胜（二郎神在）', !S.win); nightN({}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('天兵全灭提示', side().includes('二郎神觉醒前不能刀人'));
  // 新开一局后西游状态清空、记录换行

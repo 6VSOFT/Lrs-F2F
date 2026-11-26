@@ -1,4 +1,4 @@
-const VER='v28'; // 与 sw.js 的版本号一致
+const VER='v29'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -152,11 +152,6 @@ function judge(){
  if(S.seats.some(s=>!s.role))return null;
  const c=k=>S.seats.filter(s=>!s.dead&&R[s.role].c===k).length,g=c('god'),v=c('villager'),w=c('wolf');
  let wolf=!g||!v?{side:'wolf',why:!g&&!v?'神职、平民全体出局':!g?'神职全体出局':'平民全体出局'}:null,good=!w?{side:'good',why:'狼人全体出局'}:null;
- if(S.board==='xiyou'){ // 西游杀：领袖出局，其阵营立即落败
-  const wk=one('wukong'),el=one('erlang');
-  if(wk&&wk.dead&&!wolf)wolf={side:'wolf',why:'齐天大圣出局'};
-  if(el&&el.dead&&!good)good={side:'good',why:'二郎神出局'};
- }
  if(S.win){const keep=S.win.side==='wolf'?wolf:good;if(keep)return S.win;} // 先达成的结果不变
  return wolf||good;
 }

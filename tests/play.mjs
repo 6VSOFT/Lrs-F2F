@@ -83,7 +83,7 @@ async function game(bd){
   const al=sortA(),nw=al.filter(isW).length,nv=al.filter(x=>['villager','hybrid'].includes(deck[x-1])).length,ng=al.length-nw-nv;
   const bar=await ev("[...document.querySelectorAll('.st b')].map(x=>+x.textContent).join()");need(bar===[nw,ng,nv,al.length].join(),w+' stats '+bar);
   need(await ev('localStorage.getItem(KEY)===JSON.stringify(S)'),w+' persist');
-  const lw=XY&&!alive.has(at('wukong')),lg=XY&&!alive.has(at('erlang'));
+  const lw=false,lg=false;
   if(win==='wolf'&&!(!ng||!nv||lw)||win==='good'&&!(!nw||lg))win=null;
   if(!win)win=(!ng||!nv||lw)?'wolf':(!nw||lg)?'good':null;
   need((s.win?s.win.side:null)===win,`${w} win ${JSON.stringify(s.win)} exp ${win}`);
