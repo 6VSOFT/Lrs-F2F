@@ -204,8 +204,8 @@ async function game(bd){
      if(up(k)){
       const mx=1+(boost(k)?1:0),ts=shuf(A.filter(x=>x!==me)).slice(0,mx);if(mx>1)need(!await en('寻宝 第2次'),'hunt2 waits');for(let i=0;i<ts.length;i++){await rb(mx>1?'寻宝 第'+(i+1)+'次':'寻宝');await pk(ts[i]);}n[f+'T']=ts;if(mx>1)G.split=(G.split||0)+1;
       for(const x of ts)if(!(await st()).seats[x-1].role){need(!await ev("!!Q.btn('下一步')"),'unrecorded next');await seatT(x);await btn('录入身份');await tap(`[...document.querySelectorAll('.rp button')].find(b=>b.textContent.includes(${JSON.stringify(R[deck[x-1]].n)}))`);G.xyRec=(G.xyRec||0)+1;}
-      const have={...XM[k]},exp=ts.map(x=>{if(x===tang){G.tangHunt=(G.tangHunt||0)+1;return `${x}号：唐僧，空手`;}const c=kindOf(x),got=!have[c];if(got)have[c]=d;return `${x}号：${got?'得 '+c:'已有 '+c}`;});
-      const shown=(await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).filter(t=>/号：(得|已有|唐僧)/.test(t)).join('|')")).split('|').filter(Boolean).map(t=>t.replace(/(得 [ABC]|已有 [ABC]).*/,'$1'));
+      const have={...XM[k]},exp=ts.map(x=>{if(x===tang){G.tangHunt=(G.tangHunt||0)+1;return `${x}号：无法获取`;}const c=kindOf(x),got=!have[c];if(got)have[c]=d;return `${x}号：${got?'得 '+c:'无法获取'}`;});
+      const shown=(await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).filter(t=>/号：(得|无法获取)/.test(t)).join('|')")).split('|').filter(Boolean).map(t=>t.replace(/(得 [ABC]|已有 [ABC]).*/,'$1'));
       need(shown.join()===exp.join(),`hunt ${shown} exp ${exp}`);G.hunt=(G.hunt||0)+ts.length;
       const wk2=woke(k)||(!XM[k].awake&&!!(have.A&&have.B&&have.C));n[f+'H']=have;n[f+'W']=wk2;
       need(!!have.C===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].C)})`)),'C row '+k);

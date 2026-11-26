@@ -47,8 +47,8 @@ for (let g = 0; g < 120; g++) {
      if (mx > 1 && !rb('寻宝 第2次').disabled) throw Error('第 2 次寻宝应等第 1 次');
      ts.forEach((x, i) => { rb(mx > 1 ? '寻宝 第' + (i + 1) + '次' : '寻宝').click(); tap(x); }); n[f + 'T'] = ts; if (mx > 1) out.split = (out.split || 0) + 1;
      for (const x of ts) if (!S.seats[x - 1].role) { if (B('下一步')) throw Error('未录入仍可下一步'); ok('未录入提示', side().includes(x + '号：身份未录入')); S.seats[x - 1].role = deck[x - 1]; settle(); }
-     const have = {...M[k]}; const exp = ts.map(x => { if (x === tang) { out.tangHunt = (out.tangHunt || 0) + 1; return `${x}号：唐僧，空手`; } const c = kind(x), got = !have[c]; if (got) have[c] = d; return `${x}号：${got ? '得 ' + c : '已有 ' + c}`; });
-     const shown = [...document.querySelectorAll('.side .res')].map(e => e.textContent).filter(t => /号：(得|已有|唐僧)/.test(t)).map(t => t.replace(/ (?:[^ ]+|已有.*)$/, s => s.startsWith(' ') && /得/.test(t) ? '' : s).replace(/(得 [ABC]).*/, '$1').replace(/(已有 [ABC]).*/, '$1'));
+     const have = {...M[k]}; const exp = ts.map(x => { if (x === tang) { out.tangHunt = (out.tangHunt || 0) + 1; return `${x}号：无法获取`; } const c = kind(x), got = !have[c]; if (got) have[c] = d; return `${x}号：${got ? '得 ' + c : '无法获取'}`; });
+     const shown = [...document.querySelectorAll('.side .res')].map(e => e.textContent).filter(t => /号：(得|无法获取)/.test(t)).map(t => t.replace(/ (?:[^ ]+|已有.*)$/, s => s.startsWith(' ') && /得/.test(t) ? '' : s).replace(/(得 [ABC]).*/, '$1').replace(/(已有 [ABC]).*/, '$1'));
      if (shown.join() !== exp.join()) throw Error(`寻宝显示 ${shown} 期望 ${exp}`);
      const wk2 = woke(k, d) || (!M[k].awake && !!(have.A && have.B && have.C)); n[f + 'H'] = have; n[f + 'W'] = wk2;
      if (!!have.C && Math.random() < .6) { rb(TRN[k].C).click(); const c = k === 'wukong' ? 1 + ri(12) : pick(A().filter(x => x !== me && x !== at('wukong'))); if (c) { n[f + 'C'] = c; tap(c); } else none(); }
@@ -180,12 +180,12 @@ try {
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [6], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 0, C: 1}); nightN({wkT: [3], wkB: 6}); dawn(); ok('当夜寻到定海神针并觉醒即杀任意人', dead(6) && S.xy.wukong.usedB);
  // 寻宝
- setup(); S.xy.wukong.A = 1; nightN({wkT: [10]}); dawn(); ok('同类已有空手', S.xy.wukong.A === 1 && S.log.some(l => l.x.includes('已有 A，空手')));
- setup(D0, {wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('点到唐僧显示空手', side().includes('5号：唐僧，空手') && !rowOf('镇魔圈')); S.n.step = stepsOf().length - 1; dawn(); ok('点到唐僧拿不到宝物', S.xy.wukong.C === 0 && S.log.some(l => l.x.includes('5号 唐僧，空手')));
+ setup(); S.xy.wukong.A = 1; nightN({wkT: [10]}); dawn(); ok('同类已有无法获取', S.xy.wukong.A === 1 && S.log.some(l => l.x.includes('10号 无法获取（已有 A）')));
+ setup(D0, {wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('点到唐僧显示无法获取', side().includes('5号：无法获取') && !side().includes('唐僧，') && !rowOf('镇魔圈')); S.n.step = stepsOf().length - 1; dawn(); ok('点到唐僧拿不到宝物', S.xy.wukong.C === 0 && S.log.some(l => l.x.includes('5号 无法获取（唐僧）')));
  setup(D0, {wkT: [6]}); dawn(); ok('点到普通平民得 C', S.xy.wukong.C === 1);
  setup(); nightN({zx: 1}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('加持后分两次寻宝', !!rowOf('寻宝 第1次') && rb('寻宝 第2次').disabled);
  rb('寻宝 第1次').click(); pkb(6).click(); ok('第 1 次结果先出', side().includes('6号：得 C') && !rb('寻宝 第2次').disabled && !B('下一步'));
- rb('寻宝 第2次').click(); ok('第 2 次不能点同一人', pkb(6).disabled); pkb(7).click(); ok('同类不能重复得', side().includes('7号：已有 C，空手') && !!B('下一步'));
+ rb('寻宝 第2次').click(); ok('第 2 次不能点同一人', pkb(6).disabled); pkb(7).click(); ok('同类不能重复得，显示无法获取', side().includes('7号：无法获取') && !side().includes('已有 C') && !!B('下一步'));
  rb('寻宝 第1次').click(); pkb(3).click(); ok('改第 1 次会清掉第 2 次', S.n.wkT.join() === '3' && rb('寻宝 第2次') && !B('下一步'));
  rb('寻宝 第2次').click(); pkb(9).click(); S.n.step = stepsOf().length - 1; dawn(); ok('两次分别得 B、A', S.xy.wukong.B === 2 && S.xy.wukong.A === 2 && S.log.some(l => l.x.includes('3号 得 B') && l.x.includes('9号 得 A')));
  setup(D0, {elT: [1]}); dawn(); ok('二郎神点到大圣得 B', S.xy.erlang.B === 1);

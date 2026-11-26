@@ -91,10 +91,10 @@ try {
  startGame('xiyou'); D0.forEach((k, i) => S.seats[i].role = k); settle(); close_();
  const P = () => document.querySelector('.xyp').textContent;
  ok('西游面板', !!document.querySelector('.xyp') && P().includes('孙悟空') && P().includes('二郎神') && P().includes('唐僧5号'));
- S.n.wkT = [6]; S.n.step = stepsOf().indexOf('wukong'); settle(); ok('今晚寻到显示', P().includes('镇魔圈今晚得'), P());
- S.n.step = stepsOf().length - 1; settle(); confirmDawn(); close_(); ok('天亮后显示第几夜得', P().includes('镇魔圈第1夜得'), P());
+ S.n.wkT = [6]; S.n.step = stepsOf().indexOf('wukong'); settle(); ok('今晚寻到显示', P().includes('镇魔圈每晚护一人及左右今晚得') && document.querySelector('.side').textContent.includes('6号：得 C 镇魔圈（每晚护一人及左右）'), P());
+ S.n.step = stepsOf().length - 1; settle(); confirmDawn(); close_(); ok('天亮后显示第几夜得', P().includes('镇魔圈每晚护一人及左右第1夜得'), P());
  Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, usedB: true, awake: 1}); S.xy.gyUsed = true; S.xy.bound = 6; S.xy.lastZx = 4; render();
- ok('觉醒、B 已用、观音、紫霞', P().includes('觉醒第1夜') && P().includes('三尖两刃刀已用') && P().includes('甘露水已用') && P().includes('收服6号') && P().includes('紫霞上次4号'), P());
+ ok('觉醒、B 已用、观音、紫霞', P().includes('觉醒第1夜') && P().includes('三尖两刃刀击杀孙悟空，一次已用') && P().includes('哮天犬每晚封印一人技能') && P().includes('火眼金睛觉醒后查验身份') && P().includes('甘露水已用') && P().includes('收服6号') && P().includes('紫霞上次4号'), P());
  S.seats[5].dead = 'exile'; render(); ok('收服者出局', P().includes('6号 已出局'));
  S.hide = true; render(); ok('隐藏模式遮住面板', document.querySelector('.xyp').classList.contains('mask') && getComputedStyle(document.querySelector('.xyp small')).color === 'rgba(0, 0, 0, 0)');
  S.hide = false; render();
