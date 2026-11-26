@@ -91,7 +91,7 @@ try {
  startGame('xiyou'); D0.forEach((k, i) => S.seats[i].role = k); settle(); close_();
  const P = () => document.querySelector('.xyp').textContent;
  ok('西游面板', !!document.querySelector('.xyp') && P().includes('孙悟空') && P().includes('二郎神') && P().includes('唐僧5号'));
- S.n.wkT = [5]; S.n.step = stepsOf().indexOf('wukong'); settle(); ok('今晚寻到显示', P().includes('镇魔圈今晚得'), P());
+ S.n.wkT = [6]; S.n.step = stepsOf().indexOf('wukong'); settle(); ok('今晚寻到显示', P().includes('镇魔圈今晚得'), P());
  S.n.step = stepsOf().length - 1; settle(); confirmDawn(); close_(); ok('天亮后显示第几夜得', P().includes('镇魔圈第1夜得'), P());
  Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, usedB: true, awake: 1}); S.xy.gyUsed = true; S.xy.bound = 6; S.xy.lastZx = 4; render();
  ok('觉醒、B 已用、观音、紫霞', P().includes('觉醒第1夜') && P().includes('三尖两刃刀已用') && P().includes('甘露水已用') && P().includes('收服6号') && P().includes('紫霞上次4号'), P());

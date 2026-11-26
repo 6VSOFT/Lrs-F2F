@@ -43,10 +43,12 @@ for (let g = 0; g < 120; g++) {
     for (const k of ['erlang', 'wukong']) if (key === k) {
      id(k); const f = k === 'wukong' ? 'wk' : 'el', me = at(k);
      if (!up(k)) continue;
-     const mx = 1 + (boost(k) ? 1 : 0); rb('寻宝').click(); const ts = shuf(A().filter(x => x !== me)).slice(0, mx).sort((a, b) => a - b); ts.forEach(tap); B('确定').click(); n[f + 'T'] = ts;
+     const mx = 1 + (boost(k) ? 1 : 0), ts = shuf(A().filter(x => x !== me)).slice(0, mx);
+     if (mx > 1 && !rb('寻宝 第2次').disabled) throw Error('第 2 次寻宝应等第 1 次');
+     ts.forEach((x, i) => { rb(mx > 1 ? '寻宝 第' + (i + 1) + '次' : '寻宝').click(); tap(x); }); n[f + 'T'] = ts; if (mx > 1) out.split = (out.split || 0) + 1;
      for (const x of ts) if (!S.seats[x - 1].role) { if (B('下一步')) throw Error('未录入仍可下一步'); ok('未录入提示', side().includes(x + '号：身份未录入')); S.seats[x - 1].role = deck[x - 1]; settle(); }
-     const have = {...M[k]}; const exp = ts.map(x => { const c = kind(x), got = !have[c]; if (got) have[c] = d; return `${x}号：${got ? '得 ' + c : '已有 ' + c}`; });
-     const shown = [...document.querySelectorAll('.side .res')].map(e => e.textContent).filter(t => /号：(得|已有)/.test(t)).map(t => t.replace(/ (?:[^ ]+|已有.*)$/, s => s.startsWith(' ') && /得/.test(t) ? '' : s).replace(/(得 [ABC]).*/, '$1').replace(/(已有 [ABC]).*/, '$1'));
+     const have = {...M[k]}; const exp = ts.map(x => { if (x === tang) { out.tangHunt = (out.tangHunt || 0) + 1; return `${x}号：唐僧，空手`; } const c = kind(x), got = !have[c]; if (got) have[c] = d; return `${x}号：${got ? '得 ' + c : '已有 ' + c}`; });
+     const shown = [...document.querySelectorAll('.side .res')].map(e => e.textContent).filter(t => /号：(得|已有|唐僧)/.test(t)).map(t => t.replace(/ (?:[^ ]+|已有.*)$/, s => s.startsWith(' ') && /得/.test(t) ? '' : s).replace(/(得 [ABC]).*/, '$1').replace(/(已有 [ABC]).*/, '$1'));
      if (shown.join() !== exp.join()) throw Error(`寻宝显示 ${shown} 期望 ${exp}`);
      const wk2 = woke(k, d) || (!M[k].awake && !!(have.A && have.B && have.C)); n[f + 'H'] = have; n[f + 'W'] = wk2;
      if (!!have.C && Math.random() < .6) { rb(TRN[k].C).click(); const c = k === 'wukong' ? 1 + ri(12) : pick(A().filter(x => x !== me && x !== at('wukong'))); if (c) { n[f + 'C'] = c; tap(c); } else none(); }
@@ -102,7 +104,7 @@ for (let g = 0; g < 120; g++) {
    for (const k of ['erlang', 'wukong']) {
     const f = k === 'wukong' ? 'wk' : 'el';
     if (n[f + 'B']) M[k].used = true;
-    for (const x of n[f + 'T']) { const c = kind(x); if (!M[k][c]) M[k][c] = d; }
+    for (const x of n[f + 'T']) { if (x === tang) continue; const c = kind(x); if (!M[k][c]) M[k][c] = d; }
     if (!M[k].awake && M[k].A && M[k].B && M[k].C) { M[k].awake = d; out.awake++; }
     if (JSON.stringify([S.xy[k].A, S.xy[k].B, S.xy[k].C, S.xy[k].usedB, S.xy[k].awake]) !== JSON.stringify([M[k].A, M[k].B, M[k].C, M[k].used, M[k].awake])) throw Error('宝物状态 ' + k + JSON.stringify([S.xy[k], M[k]]));
    }
@@ -152,8 +154,8 @@ try {
  setup(); S.xy.wukong.C = 1; nightN({knife: 2, wkC: 1}); dawn(); ok('镇魔圈护左右（12-1-2）', !dead(2));
  setup(); S.xy.wukong.C = 1; nightN({knife: 1, wkC: 12}); dawn(); ok('镇魔圈不护孙悟空自己', dead(1));
  setup(); S.xy.wukong.C = 1; S.seats[5].dead = 'exile'; S.seats[5].at = '第0天'; nightN({knife: 7, wkC: 6}); dawn(); ok('死者也占位', !dead(7));
- setup(); nightN({wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('当夜寻到即可用', !!rowOf('镇魔圈') && side().indexOf('得 C') < side().indexOf('镇魔圈'));
- setup(); nightN({wkT: [5], wkC: 6, knife: 6}); dawn(); ok('当夜寻到的镇魔圈当夜生效', !dead(6) && S.xy.wukong.C === 2);
+ setup(); nightN({wkT: [6]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('当夜寻到即可用', !!rowOf('镇魔圈') && side().indexOf('得 C') < side().indexOf('镇魔圈'));
+ setup(); nightN({wkT: [6], wkC: 6, knife: 6}); dawn(); ok('当夜寻到的镇魔圈当夜生效', !dead(6) && S.xy.wukong.C === 2);
  setup(); nightN({wkT: [6], wkC: 6, knife: 6}); nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('换人寻宝后旧宝物仍在', !!rowOf('镇魔圈'));
  setup(); nightN({wkC: 6, knife: 6}); dawn(); ok('没寻到不能用', dead(6));
  setup(); S.xy.wukong.C = 1; nightN({}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('第 2 夜可用第 1 夜的宝物', !!rowOf('镇魔圈'));
@@ -170,19 +172,25 @@ try {
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 1, awake: 1}); nightN({knife: 1}); dawn(); ok('觉醒大圣夜里无敌', !dead(1) && S.log.some(l => l.x.includes('无敌')));
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 1, awake: 1}); nightN({wkB: 6}); dawn(); ok('觉醒定海神针杀任意人', dead(6));
  setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 1, awake: 1}); nightN({}); ok('觉醒二郎神入狼队', inPack(seat(9)));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜提示得 C', side().includes('得 C')); S.n.step = stepsOf().length - 1; dawn(); ok('集齐后觉醒', S.xy.erlang.awake === 2 && S.log.some(l => l.x.includes('集齐三件宝物')));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [6]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜提示得 C', side().includes('得 C')); S.n.step = stepsOf().length - 1; dawn(); ok('集齐后觉醒', S.xy.erlang.awake === 2 && S.log.some(l => l.x.includes('集齐三件宝物')));
  ok('次夜仍觉醒', (nightN({}), woke('erlang')));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && !inPack(seat(9)));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); S.seats[9].dead = S.seats[10].dead = S.seats[11].dead = 'exile'; nightN({elT: [5]}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('当夜觉醒不加入当夜刀人', side().includes('二郎神觉醒前不能刀人')); dawn(); nightN({}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('下一夜加入刀人', inPack(seat(9)) && side().includes('二郎神已觉醒'));
- setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [5], elB: 6}); dawn(); ok('当夜觉醒三尖两刃刀杀任意人', dead(6));
- setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [5], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [6]}); S.n.step = stepsOf().indexOf('erlang'); render(); ok('集齐当夜觉醒可查验', woke('erlang') && !!rowOf('查验身份') && !inPack(seat(9)));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); S.seats[9].dead = S.seats[10].dead = S.seats[11].dead = 'exile'; nightN({elT: [6]}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('当夜觉醒不加入当夜刀人', side().includes('二郎神觉醒前不能刀人')); dawn(); nightN({}); S.n.step = stepsOf().indexOf('wolf'); render(); ok('下一夜加入刀人', inPack(seat(9)) && side().includes('二郎神已觉醒'));
+ setup(); Object.assign(S.xy.erlang, {A: 1, B: 1, C: 0}); nightN({elT: [7], elB: 6}); dawn(); ok('当夜觉醒三尖两刃刀杀任意人', dead(6));
+ setup(); Object.assign(S.xy.wukong, {A: 1, B: 1, C: 0}); nightN({wkT: [6], knife: 1}); dawn(); ok('当夜觉醒大圣当夜无敌', !dead(1) && S.xy.wukong.awake === 2);
  setup(); Object.assign(S.xy.wukong, {A: 1, B: 0, C: 1}); nightN({wkT: [3], wkB: 6}); dawn(); ok('当夜寻到定海神针并觉醒即杀任意人', dead(6) && S.xy.wukong.usedB);
  // 寻宝
  setup(); S.xy.wukong.A = 1; nightN({wkT: [10]}); dawn(); ok('同类已有空手', S.xy.wukong.A === 1 && S.log.some(l => l.x.includes('已有 A，空手')));
- setup(D0, {wkT: [5]}); dawn(); ok('点到唐僧得 C', S.xy.wukong.C === 1);
+ setup(D0, {wkT: [5]}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('点到唐僧显示空手', side().includes('5号：唐僧，空手') && !rowOf('镇魔圈')); S.n.step = stepsOf().length - 1; dawn(); ok('点到唐僧拿不到宝物', S.xy.wukong.C === 0 && S.log.some(l => l.x.includes('5号 唐僧，空手')));
+ setup(D0, {wkT: [6]}); dawn(); ok('点到普通平民得 C', S.xy.wukong.C === 1);
+ setup(); nightN({zx: 1}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('加持后分两次寻宝', !!rowOf('寻宝 第1次') && rb('寻宝 第2次').disabled);
+ rb('寻宝 第1次').click(); pkb(6).click(); ok('第 1 次结果先出', side().includes('6号：得 C') && !rb('寻宝 第2次').disabled && !B('下一步'));
+ rb('寻宝 第2次').click(); ok('第 2 次不能点同一人', pkb(6).disabled); pkb(7).click(); ok('同类不能重复得', side().includes('7号：已有 C，空手') && !!B('下一步'));
+ rb('寻宝 第1次').click(); pkb(3).click(); ok('改第 1 次会清掉第 2 次', S.n.wkT.join() === '3' && rb('寻宝 第2次') && !B('下一步'));
+ rb('寻宝 第2次').click(); pkb(9).click(); S.n.step = stepsOf().length - 1; dawn(); ok('两次分别得 B、A', S.xy.wukong.B === 2 && S.xy.wukong.A === 2 && S.log.some(l => l.x.includes('3号 得 B') && l.x.includes('9号 得 A')));
  setup(D0, {elT: [1]}); dawn(); ok('二郎神点到大圣得 B', S.xy.erlang.B === 1);
  // 紫霞
- setup(); nightN({zx: 1}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('紫霞加持大圣多寻宝', side().includes('寻宝 0/2') && side().includes('紫霞仙子加持'));
+ setup(); nightN({zx: 1}); S.n.step = stepsOf().indexOf('wukong'); render(); ok('紫霞加持大圣多寻宝', side().includes('寻宝 第2次') && side().includes('紫霞仙子加持'));
  setup(); S.xy.erlang.C = 1; nightN({zx: 1, elC: 2}); ok('紫霞被封印不能加持大圣', picks('wukong') === 1);
  setup(); S.xy.erlang.C = 1; nightN({zx: 9, elC: 2}); ok('紫霞加持二郎神不受封印影响', picks('erlang') === 2);
  setup(D0, {zx: 4}); dawn(); nightN({}); S.n.step = stepsOf().indexOf('zixia'); render(); rb('加持').click(); ok('紫霞不能连续点同一人', pkb(4).disabled); close_();

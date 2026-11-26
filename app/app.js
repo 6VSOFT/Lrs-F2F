@@ -1,4 +1,4 @@
-const VER='v31'; // 与 sw.js 的版本号一致
+const VER='v32'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -261,7 +261,8 @@ const picks=k=>1+(boosted(k)?1:0);
 // 今晚寻宝的结果（按点的顺序，已有的类别空手）
 function huntRes(k){
  const have={...XY()[k]},T=S.n[k==='wukong'?'wkT':'elT']||[];
- return T.map(x=>{const c=seat(x).role?kindOf(seat(x)):null;if(!c)return {x,c,got:false};const got=!have[c];if(got)have[c]=S.day;return {x,c,got};});
+ return T.map(x=>{if(x===XY().tang)return {x,c:null,tang:true,got:false}; // 点到唐僧拿不到宝物
+  const c=seat(x).role?kindOf(seat(x)):null;if(!c)return {x,c,got:false};const got=!have[c];if(got)have[c]=S.day;return {x,c,got};});
 }
 // 黑熊精：左右两侧最近的存活玩家里有没有狼；唐僧在旁边时结果反转
 function bearSide(){
@@ -300,7 +301,7 @@ function xyEnforce(){
  for(const k of ['wukong','erlang']){
   const f=k==='wukong'?'wk':'el',s=one(k);
   if(!s||s.dead){n[f+'T']=[];n[f+'B']=n[f+'C']=n[f+'A']=null;continue;}
-  n[f+'T']=(n[f+'T']||[]).filter(t=>!seat(t).dead&&t!==s.n).slice(0,picks(k));
+  n[f+'T']=(n[f+'T']||[]).filter((t,i,a)=>t&&!seat(t).dead&&t!==s.n&&a.indexOf(t)===i).slice(0,picks(k));
   if(!owns(k,'B')||x[k].usedB)n[f+'B']=null;if(!owns(k,'C'))n[f+'C']=null;if(!woke(k))n[f+'A']=null;
   for(const g of ['B','A'])if(n[f+g]===s.n)n[f+g]=null;
  }
@@ -318,7 +319,7 @@ function xyDawnLog(){
   if(n[f+'C']>0)L(`${nm}：${TR[k].C} ${n[f+'C']}号`);
   if(n[f+'B']>0)L(`${nm}：${TR[k].B} 击 ${n[f+'B']}号`);
   if(n[f+'A']>0)L(`${nm}查验：${n[f+'A']}号 → ${exactName(seat(n[f+'A']))}`);
-  const h=huntRes(k);if(h.length)L(`${nm}寻宝：`+h.map(r=>`${r.x}号 ${r.c?(r.got?'得 '+r.c+' '+TR[k][r.c]:'已有 '+r.c+'，空手'):'未录入'}`).join('｜'));
+  const h=huntRes(k);if(h.length)L(`${nm}寻宝：`+h.map(r=>`${r.x}号 ${r.tang?'唐僧，空手':r.c?(r.got?'得 '+r.c+' '+TR[k][r.c]:'已有 '+r.c+'，空手'):'未录入'}`).join('｜'));
  }
  if(who('guanyin'))L(`观音：${n.gyS?'甘露水救 '+n.knife+'号':'未用甘露水'}｜${n.gyB>0?'收服 '+n.gyB+'号':'未收服'}`);
  const b=bearSide();if(b&&who('heixiong')&&!blocked('heixiong'))L(`黑熊精：两侧 ${b.pair.join('、')}号 → ${b.say?'咆哮（报有狼）':'不咆哮（报没狼）'}${b.tang?'（唐僧在旁，结果反转）':''}`);
@@ -334,9 +335,9 @@ function xyCarry(){
  if(n.gyS)x.gyUsed=true;if(n.gyB>0&&!x.bound)x.bound=n.gyB; // 整局只收服一人
  x.lastZx=n.zx||0;
 }
-function pickHunt(k){
- const f=k==='wukong'?'wkT':'elT',me=one(k),max=picks(k);
- seatPicker(`${LEAD[k]}寻宝：点 ${max} 人`,{multi:true,max,min:max,sel:S.n[f]||[],ok:s=>alive(s)&&(!me||s.n!==me.n),done:l=>upd(()=>S.n[f]=l)});
+function pickHunt(k,i=0){
+ const f=k==='wukong'?'wkT':'elT',me=one(k),T=S.n[f]||[],other=T.filter((x,j)=>j!==i);
+ seatPicker(`${LEAD[k]}${picks(k)>1?`第 ${i+1} 次`:''}寻宝：点谁？`,{ok:s=>alive(s)&&(!me||s.n!==me.n)&&!other.includes(s.n),done:x=>upd(()=>{const a=[...(S.n[f]||[])];a[i]=x;S.n[f]=a.slice(0,i+1);})});
 }
 function leadStep(k){
  const s=one(k),f=k==='wukong'?'wk':'el',t=XY()[k],dead=s&&s.dead,ex=k==='wukong'?'二郎神':'齐天大圣';
@@ -345,13 +346,15 @@ function leadStep(k){
   const have='ABC'.split('').filter(c=>t[c]).map(c=>`${c} ${TR[k][c]}`).join('、');
   body+=note(`之前已有：${have||'无'}${t.awake?'（已觉醒）':''}`);
   const T=S.n[f+'T']||[],h=huntRes(k),max=picks(k);
-  body+=row(`寻宝 ${T.length}/${max}`,T.length?T.join('、')+'号':'<i>未选</i>','选择',`pickHunt('${k}')`)+(boosted(k)?note('紫霞仙子加持：今晚多寻宝一次。'):'')+
-   h.map(r=>!r.c?res(0,`${r.x}号：身份未录入，请先点座位录入`):r.got?res(1,`${r.x}号：得 ${r.c} ${TR[k][r.c]}`):res(0,`${r.x}号：已有 ${r.c}，空手`)).join('')+note('点到狼人得 A、神职得 B、平民得 C；同类宝物只拿一次，新宝物当夜即可使用，集齐三件当夜觉醒。');
+  const rs=r=>!r?'':r.tang?res(0,`${r.x}号：唐僧，空手`):!r.c?res(0,`${r.x}号：身份未录入，请先点座位录入`):r.got?res(1,`${r.x}号：得 ${r.c} ${TR[k][r.c]}`):res(0,`${r.x}号：已有 ${r.c}，空手`);
+  body+=(boosted(k)?note('紫霞仙子加持：今晚分开寻宝两次，先告知第 1 次结果，再点第 2 次。'):'')+
+   Array.from({length:max},(_,i)=>row(max>1?`寻宝 第${i+1}次`:'寻宝',T[i]?lab(T[i]):'<i>未选</i>','选择',`pickHunt('${k}',${i})`,i>0&&!(h[i-1]&&(h[i-1].c||h[i-1].tang)))+rs(h[i])).join('')+
+   note('点到狼人得 A、神职得 B、平民得 C，点到唐僧空手；同类宝物只拿一次，新宝物当夜即可使用，集齐三件当夜觉醒。');
   if(owns(k,'C'))body+=tgt(TR[k].C,f+'C',{none:'不使用'})+note(k==='wukong'?'保护该号码及左右共 3 人今夜不被狼刀和三尖两刃刀杀死，死者也占位；不护孙悟空自己。':'封印该号码今夜的技能：观音、黑熊精今晚不能行动；点紫霞则孙悟空今晚拿不到加持；对齐天大圣无效。');
   if(owns(k,'B')&&!t.usedB)body+=tgt(TR[k].B+'（一次）',f+'B',{none:'不使用'})+note(woke(k)?'已觉醒：可直接击杀任意一人。':`点中${ex}则其直接死亡，点错无效。`);
   if(woke(k))body+=tgt('查验身份',f+'A')+(S.n[f+'A']>0?res(1,`身份：${exactName(seat(S.n[f+'A']))}`):'');
  }
- return {t:LEAD[k],say:eye(k)+'请点人寻宝，然后使用宝物。”<br>（法官用手势告知寻宝结果）'+shut(k),body,ok:has(k)&&(!s||dead||((S.n[f+'T']||[]).length===picks(k)&&huntRes(k).every(r=>r.c)))};
+ return {t:LEAD[k],say:eye(k)+'请点人寻宝，然后使用宝物。”<br>（法官用手势告知寻宝结果）'+shut(k),body,ok:has(k)&&(!s||dead||((S.n[f+'T']||[]).length===picks(k)&&huntRes(k).every(r=>r.c||r.tang)))};
 }
 const XYSTEPS={
  zixia:()=>{const b=blocked('zixia');return {t:'紫霞仙子',say:eye('zixia')+'今晚你要加持谁？”<br>（比划号码）'+shut('zixia'),

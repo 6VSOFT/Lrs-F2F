@@ -202,10 +202,10 @@ async function game(bd){
     for(const k of ['erlang','wukong'])if(key===k){
      await ident(k);const f=k==='wukong'?'wk':'el',me=at(k);
      if(up(k)){
-      const mx=1+(boost(k)?1:0),ts=shuf(A.filter(x=>x!==me)).slice(0,mx).sort((a,b)=>a-b);await rb('寻宝');for(const x of ts)await pk(x);await btn('确定');n[f+'T']=ts;
+      const mx=1+(boost(k)?1:0),ts=shuf(A.filter(x=>x!==me)).slice(0,mx);if(mx>1)need(!await en('寻宝 第2次'),'hunt2 waits');for(let i=0;i<ts.length;i++){await rb(mx>1?'寻宝 第'+(i+1)+'次':'寻宝');await pk(ts[i]);}n[f+'T']=ts;if(mx>1)G.split=(G.split||0)+1;
       for(const x of ts)if(!(await st()).seats[x-1].role){need(!await ev("!!Q.btn('下一步')"),'unrecorded next');await seatT(x);await btn('录入身份');await tap(`[...document.querySelectorAll('.rp button')].find(b=>b.textContent.includes(${JSON.stringify(R[deck[x-1]].n)}))`);G.xyRec=(G.xyRec||0)+1;}
-      const have={...XM[k]},exp=ts.map(x=>{const c=kindOf(x),got=!have[c];if(got)have[c]=d;return `${x}号：${got?'得 '+c:'已有 '+c}`;});
-      const shown=(await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).filter(t=>/号：(得|已有)/.test(t)).join('|')")).split('|').filter(Boolean).map(t=>t.replace(/(得 [ABC]|已有 [ABC]).*/,'$1'));
+      const have={...XM[k]},exp=ts.map(x=>{if(x===tang){G.tangHunt=(G.tangHunt||0)+1;return `${x}号：唐僧，空手`;}const c=kindOf(x),got=!have[c];if(got)have[c]=d;return `${x}号：${got?'得 '+c:'已有 '+c}`;});
+      const shown=(await ev("[...document.querySelectorAll('.side .res')].map(e=>e.textContent).filter(t=>/号：(得|已有|唐僧)/.test(t)).join('|')")).split('|').filter(Boolean).map(t=>t.replace(/(得 [ABC]|已有 [ABC]).*/,'$1'));
       need(shown.join()===exp.join(),`hunt ${shown} exp ${exp}`);G.hunt=(G.hunt||0)+ts.length;
       const wk2=woke(k)||(!XM[k].awake&&!!(have.A&&have.B&&have.C));n[f+'H']=have;n[f+'W']=wk2;
       need(!!have.C===!!(await ev(`!!Q.row(${JSON.stringify(TRN[k].C)})`)),'C row '+k);
@@ -232,7 +232,7 @@ async function game(bd){
   for(const x of dl)if(gunK(x)&&noGun(x))NG.add(x);if(n.learn&&!X.learn){X0={role:deck[n.learn-1]};if(X0.role==='hunter'&&D.has(at('mechwolf')))NG.add(at('mechwolf'));}if(n.trade&&!isW(n.trade.n)){L0={n:n.trade.n,sk:n.trade.sk};if(L0.sk==='gun'&&D.has(L0.n))NG.add(L0.n);}
   await adv('确认');for(const x of dl)kill(x,'night',`第${d}夜`);
   await chk('dawn');if(rnd()<.2)await reload().then(async()=>{if(win)await ev('0');});
-  if(XY){for(const k of ['erlang','wukong']){const f=k==='wukong'?'wk':'el';if(n[f+'B'])XM[k].used=true;for(const x of n[f+'T']||[]){const c=kindOf(x);if(!XM[k][c])XM[k][c]=d;}if(!XM[k].awake&&XM[k].A&&XM[k].B&&XM[k].C){XM[k].awake=d;G.awake=(G.awake||0)+1;}const sx=(await st()).xy[k];need(JSON.stringify([sx.A,sx.B,sx.C,sx.usedB,sx.awake])===JSON.stringify([XM[k].A,XM[k].B,XM[k].C,XM[k].used,XM[k].awake]),'treasure '+k);}if(n.gyS)XM.gyUsed=true;if(n.gyB&&!XM.bound)XM.bound=n.gyB;XM.lastZx=n.zx||0;if(d===1)need((await st()).xy.tang===tang,'tang');}
+  if(XY){for(const k of ['erlang','wukong']){const f=k==='wukong'?'wk':'el';if(n[f+'B'])XM[k].used=true;for(const x of n[f+'T']||[]){if(x===tang)continue;const c=kindOf(x);if(!XM[k][c])XM[k][c]=d;}if(!XM[k].awake&&XM[k].A&&XM[k].B&&XM[k].C){XM[k].awake=d;G.awake=(G.awake||0)+1;}const sx=(await st()).xy[k];need(JSON.stringify([sx.A,sx.B,sx.C,sx.usedB,sx.awake])===JSON.stringify([XM[k].A,XM[k].B,XM[k].C,XM[k].used,XM[k].awake]),'treasure '+k);}if(n.gyS)XM.gyUsed=true;if(n.gyB&&!XM.bound)XM.bound=n.gyB;XM.lastZx=n.zx||0;if(d===1)need((await st()).xy.tang===tang,'tang');}
   X.lg=n.guard||0;X.ld=n.dream||0;X.lc=n.charm||0;if(n.swap)X.sw.push(...n.swap);if(n.anti)X.uA=1;if(n.poison)X.uP=1;if(n.aw)X.awake=d;
   if(n.trade){X.traded=1;if(!isW(n.trade.n))X.lucky={n:n.trade.n,sk:n.trade.sk,used:0};}if(X.lucky&&(n.lcheck||n.lpoison))X.lucky.used=1;if(n.learn&&!X.learn)X.learn={role:deck[n.learn-1]};if(n.mpoison)X.mp=1;if(n.mguard)X.mgd=1;
   if(win)break;
