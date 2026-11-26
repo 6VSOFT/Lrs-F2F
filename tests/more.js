@@ -128,6 +128,15 @@ try {
  pubOn = true; render(); document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'})); ok('Esc 退出大屏', !pubOn);
  ok('数据已存盘', localStorage.getItem(KEY) === JSON.stringify(S));
  ok('页面无 undefined', !/undefined|NaN/.test(app()));
+ // ---------- 竞选后再公布死讯（所有板子） ----------
+ for (const b of Object.keys(BOARDS)) { startGame(b); const roles = []; for (const [k, c] of Object.entries(BD().cnt)) for (let i = 0; i < c; i++) roles.push(k); roles.forEach((k, i) => S.seats[i].role = k);
+  const v = S.seats.find(x => x.role === 'villager').n; S.seats[v - 1].dead = 'night'; S.seats[v - 1].at = '第1夜'; S.night = false; S.d = null; S.badgeDone = false; S.badgeLost = false; settle();
+  const t1 = document.querySelector('.side').textContent; if (!(t1.includes('警长竞选') && t1.includes('竞选结束后公布') && !t1.includes('玩家出局'))) { ok('竞选时不公布死讯 ' + b, false, t1.slice(0, 200)); continue; }
+  sheriff_(0); settle(); const t2 = document.querySelector('.side').textContent;
+  ok('竞选后公布死讯 ' + b, t2.includes(`昨晚，${v}号玩家出局`) && t2.indexOf('昨晚') < t2.indexOf('请投票'), t2.slice(0, 200)); }
+ day1([1, 3], 0); ok('平安夜竞选后公布', !document.querySelector('.side').textContent.includes('平安夜')); sheriff_(3); settle(); ok('平安夜', document.querySelector('.side').textContent.includes('昨晚是平安夜'));
+ doExile(0); nextNight(); S.n.knife = 7; S.n.step = stepsOf().length - 1; render(); ok('第 2 天天亮口令', document.querySelector('.side .say').textContent.includes('天亮后公布昨夜死讯'));
+ confirmDawn(); close_(); ok('没有竞选直接公布', document.querySelector('.side').textContent.includes('昨晚，7号玩家出局') && !document.querySelector('.side').textContent.includes('竞选结束后公布'));
  // ---------- 记录显示、撕毁警徽 ----------
  day1(); sheriff_(3); settle(); openLog();
  ok('记录按夜/天分段', [...document.querySelectorAll('#sheet .lgh')].map(e => e.textContent.trim()).join() === '第1夜,第1天', [...document.querySelectorAll('#sheet .lgh')].map(e => e.textContent));

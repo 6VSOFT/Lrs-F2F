@@ -1,4 +1,4 @@
-const VER='v36'; // 与 sw.js 的版本号一致
+const VER='v37'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -475,7 +475,7 @@ const STEPS={
    ok:ws.length===wt&&bd.ids.every(k=>pk(k)||!!one(k))};},
  dawn:()=>{
   const r=resolve(),nd=nightDead(r),unk=S.seats.filter(s=>!s.role).length,guns=r.D.filter(d=>gunTonight(seat(d)));
-  return {t:'天亮结算',say:'“天亮了，请睁眼。”<br>（若有警长竞选，先进行上警环节，再公布死讯）',
+  return {t:'天亮结算',say:S.day===1||S.elLater?'“天亮了，请睁眼。”<br>（先进行警长竞选，竞选结束后再公布昨夜死讯）':'“天亮了，请睁眼。”<br>（天亮后公布昨夜死讯）',
    body:res(!nd.length,nd.length?'昨夜死亡：'+nd.map(snv).join('、'):'平安夜')+r.N.map(note).join('')+
     guns.map(d=>note(`${S.hide?lab(d):gunName(seat(d))}${noShoot(d)?noShoot(d)+'，不可开枪。':'夜间死亡，可以开枪。'}`)).join('')+
     (r.D.some(d=>seat(d).role==='idiot')?note('白痴夜间死亡，直接出局，不能翻牌。'):'')+(unk?note(`${ic('warn')} 还有 ${unk} 个座位未录入身份。`):'')};}
@@ -599,10 +599,14 @@ function nextNight(){
 
 /* ---------- 白天流程：每天放逐 1 人 ---------- */
 // S.d：今天的结果 {n:放逐座位(0=无人), flip:白痴翻牌, also:[连带殉情], skip:'duel'|'boom' 直接入夜, duel/boom:对应座位, lost:自爆吞掉警徽}；null=尚未投票
+// 昨夜死讯：有警长竞选时，选完警长再公布（所有板子）
+const lastNight=()=>S.seats.filter(s=>s.dead==='night'&&s.at===`第${S.day}夜`).map(s=>s.n);
+function deathNews(){const nd=lastNight();return `<div class="dn">${say(nd.length?`“昨晚，${nd.join('号、')}号玩家出局。”<br>（出局玩家按局规发表遗言）`:'“昨晚是平安夜。”')}</div>`;}
 function dayPanel(){
  const d=S.d,s=d&&d.n?seat(d.n):null,kn=one('knight'),bm=one('bloodmoon');
  let body='';
- if(!d&&electing())body+=electPanel();
+ if(!d&&electing())body+=electPanel()+note(`${ic('moon')} 昨夜死讯在警长竞选结束后公布。`);
+ else body+=deathNews();
  if(!d){
   body+=say('“请投票。”<br>（统计票数，选出今天被放逐的玩家）')+row('放逐','<i>未选</i>','选择','pickExile()')+row('投票明细',voteState('exile'),'记票',"openVote('exile')");
   if(kn&&!kn.dead&&!S.knightUsed)body+=row('骑士决斗','未使用','决斗','pickDuel()');
