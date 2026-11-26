@@ -64,6 +64,23 @@ try {
  ok('玩家胜率', t.P['小明'].n === 3 && t.P['小明'].w === 1 && t.P['老王'].w === 2 && t.P['老王'].wolf === 3, t.P);
  ok('玩家分阵营胜率', t.P['小明'].ww === 0 && t.P['老王'].ww === 2, t.P);
  ok('名字去掉危险字符', !!t.P['bx'] && !Object.keys(t.P).some(k => /[<>]/.test(k)));
+ // 玩家表现：1 预言家小明、2 女巫阿强为神民，9 狼人老王
+ const lg = [{t: '第1夜', x: '狼刀：1号'}, {t: '第1天', x: '警长投票：3号 2票（1、2）｜9号 1票（4）'}, {t: '第1天', x: '警长投票（PK）：3号 1票（1）｜9号 1票（2）'},
+  {t: '第1天', x: '放逐投票：9号 1票（1）｜5号 1票（2）'}, {t: '第1天', x: '投票放逐：6号·平民'}, {t: '第1天', x: '更正：取消 6号 的放逐'}, {t: '第1天', x: '投票放逐：5号·平民'},
+  {t: '第2夜', x: '狼刀：5号'}, {t: '第2天', x: '投票放逐：10号·狼人'}];
+ const P2 = {}; ['小明', '阿强', '老王'].forEach(n => P2[n] = {n: 1, w: 0, wolf: 0, ww: 0, sv: 0, sg: 0, ev: 0, ew: 0, kn: 0, kg: 0, xn: 0, xg: 0});
+ skillOf({names: nm, seats: sd, log: lg}, P2);
+ ok('警徽票正确率', P2['小明'].sv === 2 && P2['小明'].sg === 2 && P2['阿强'].sv === 2 && P2['阿强'].sg === 1, [P2['小明'], P2['阿强']]);
+ ok('投狼正确率', P2['小明'].ev === 1 && P2['小明'].ew === 1 && P2['阿强'].ev === 1 && P2['阿强'].ew === 0);
+ ok('屠神率', P2['老王'].kn === 2 && P2['老王'].kg === 1, P2['老王']);
+ ok('抗推率（更正的放逐不算）', P2['老王'].xn === 2 && P2['老王'].xg === 1, P2['老王']);
+ ok('狼人不算警徽票', P2['老王'].sv === 0 && P2['老王'].ev === 0);
+ const sd2 = sd.map(s => ({...s})); sd2[8].dead = 'exile'; sd2[8].at = '第1天'; const P3 = {老王: {...P2['老王'], kn: 0, kg: 0, xn: 0, xg: 0}};
+ skillOf({names: nm, seats: sd2, log: lg}, P3); ok('出局后的夜刀、放逐不算', P3['老王'].kn === 1 && P3['老王'].xn === 1, P3['老王']);
+ saveHist([{id: 'k1', end: Date.now(), board: 'std', day: 2, win: {side: 'good', why: 'x'}, names: nm, seats: sd, log: lg}]);
+ openStats(); ok('统计页显示神民、狼人表现', sh().includes('警徽票正确率') && sh().includes('投狼正确率') && sh().includes('屠神率') && sh().includes('抗推率') && [...document.querySelectorAll('#sheet .pl')].find(e => e.textContent.includes('老王')).textContent.includes('50%'));
+ ok('神民只显示神民表现', ![...document.querySelectorAll('#sheet .pl')].find(e => e.textContent.includes('小明')).textContent.includes('屠神率'));
+ saveHist([['std', 'good', 3], ['std', 'wolf', 5], ['std', null, 2], ['xiyou', 'wolf', 4]].map(([b, w, d], i) => ({id: 's' + i, end: Date.now() - i * 1e6, board: b, day: d, win: w ? {side: w, why: 'x'} : null, names: nm, seats: sd, log: [{t: '第1夜', x: 'x'}]})));
  openStats(); ok('玩家显示总胜率、神民胜率、狼人胜率', sh().includes('总胜率') && sh().includes('神民胜率') && sh().includes('狼人胜率') && [...document.querySelectorAll('#sheet .pl')].find(e => e.textContent.includes('老王')).textContent.includes('67%'));
  ok('统计页内容', sh().includes('对局统计') && sh().includes('好人胜') && sh().includes('标准版') && sh().includes('西游杀') && sh().includes('小明') && sh().includes('不上传'));
  ok('统计含当前对局', statGames().length === 5 && statGames()[0].id === S.id);

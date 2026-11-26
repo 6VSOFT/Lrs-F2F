@@ -1,4 +1,4 @@
-const VER='v35'; // 与 sw.js 的版本号一致
+const VER='v36'; // 与 sw.js 的版本号一致
 let newSW=null,applying=false; // 已下载、等待启用的新版
 /* ---------- 图标 ---------- */
 const IC={chart:'M4 20V11M10 20V5M16 20v-6M21 20H3',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4ZM5 17a3 3 0 0 1 3-3h11',tv:'M3 5h18v12H3zM8 21h8M12 17v4',pic:'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9h.01',talk:'M4 5h16v11H10l-5 4v-4H4z',vol:'M4 9v6h4l5 4V5L8 9H4ZM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',save:'M12 4v11M7 10l5 5 5-5M5 20h14',eye:'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',eyeoff:'M3 3l18 18M10 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.7A16 16 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2',
@@ -1252,8 +1252,26 @@ const avgDay=a=>a.length?(a.reduce((x,g)=>x+(+g.day||0),0)/a.length).toFixed(1):
 const bar2=(g,w)=>`<div class="sb2">${g+w?`<i class="g" style="flex:${g}"></i><i class="w" style="flex:${w}"></i>`:''}</div>`;
 function statsOf(gs){const fin=gs.filter(g=>g.win&&g.win.side),good=fin.filter(g=>g.win.side==='good').length,by={},P={};
  gs.forEach(g=>(by[g.board]=by[g.board]||[]).push(g));
- fin.forEach(g=>g.seats.forEach(s=>{const n=cleanName(String(g.names[s.n-1]||''));if(!n||!s.role)return;const p=P[n]=P[n]||{n:0,w:0,wolf:0,ww:0};const sd=sideOf(s),won=sd===g.win.side;p.n++;if(won)p.w++;if(sd==='wolf'){p.wolf++;if(won)p.ww++;}}));
+ fin.forEach(g=>g.seats.forEach(s=>{const n=cleanName(String(g.names[s.n-1]||''));if(!n||!s.role)return;const p=P[n]=P[n]||{n:0,w:0,wolf:0,ww:0,sv:0,sg:0,ev:0,ew:0,kn:0,kg:0,xn:0,xg:0};const sd=sideOf(s),won=sd===g.win.side;p.n++;if(won)p.w++;if(sd==='wolf'){p.wolf++;if(won)p.ww++;}}));
+ fin.forEach(g=>skillOf(g,P));
  return {gs,fin,good,wolf:fin.length-good,by,P};}
+// 从对局记录算玩家表现：神民的警长票、放逐票；狼人的夜刀、白天放逐
+// 警徽票正确率：神民投的警长票里，投给神民阵营的比例；投狼正确率：神民投的放逐票里，投给狼人的比例
+// 屠神率：狼人在场的夜里，狼刀刀中神职的比例；抗推率：狼人在场的白天，放逐出局的是好人的比例
+const phaseKey=t=>{const m=String(t).match(/第(\d+)(夜|天)/);return m?m[1]*2-(m[2]==='夜'?1:0):0;};
+function skillOf(g,P){
+ const who=n=>P[cleanName(String(g.names[n-1]||''))],st=n=>g.seats[n-1],on=(s,p)=>!s.dead||phaseKey(s.at)>=p,isGod=s=>!!(s&&s.role&&R[s.role]&&R[s.role].c==='god');
+ const wolvesAt=p=>g.seats.filter(s=>s.role&&sideOf(s)==='wolf'&&on(s,p)),ex={};
+ g.log.forEach(l=>{const p=phaseKey(l.t);
+  const v=l.x.match(/^(放逐投票|警长投票)(?:（PK）)?：([\s\S]*)$/);
+  if(v)return v[2].split('｜').forEach(t=>{const a=t.match(/^(\d+)号 [\d.]+票（(.*)）$/),c=a&&st(+a[1]);if(!c)return;
+   a[2].split('、').forEach(w=>{const vs=st(parseInt(w)),q=vs&&vs.role&&sideOf(vs)==='good'&&who(vs.n);if(!q)return;
+    if(v[1]==='警长投票'){q.sv++;if(c.role&&sideOf(c)==='good')q.sg++;}else{q.ev++;if(c.role&&sideOf(c)==='wolf')q.ew++;}});});
+  const k=l.x.match(/^狼刀：(\d+)号/);
+  if(k){const t=st(+k[1]);if(t)wolvesAt(p).forEach(s=>{const q=who(s.n);if(q){q.kn++;if(isGod(t))q.kg++;}});return;}
+  const e=l.x.match(/^投票放逐：(\d+)号/);if(e){ex[p]=+e[1];return;}
+  if(/^更正：取消/.test(l.x)&&/的放逐|无人放逐/.test(l.x))delete ex[p];});
+ Object.entries(ex).forEach(([p,n])=>{const t=st(n);if(t&&t.role)wolvesAt(+p).filter(s=>s.n!==n).forEach(s=>{const q=who(s.n);if(q){q.xn++;if(sideOf(t)==='good')q.xg++;}});});}
 function openStats(){const t=statsOf(statGames());
  sheet(`<h2>${ic('chart')} 对局统计</h2>${t.gs.length?`
   <div class="sx"><span><b>${t.gs.length}</b>局</span><span><b>${t.fin.length}</b>已分胜负</span><span class="g"><b>${pct(t.good,t.fin.length)}</b>好人胜</span><span class="w"><b>${pct(t.wolf,t.fin.length)}</b>狼人胜</span><span><b>${avgDay(t.fin)}</b>平均天数</span></div>${bar2(t.good,t.wolf)}
@@ -1261,7 +1279,7 @@ function openStats(){const t=statsOf(statGames());
   <div class="st2">${Object.entries(t.by).sort((a,b)=>b[1].length-a[1].length).map(([k,a])=>{const f=a.filter(g=>g.win&&g.win.side),g=f.filter(x=>x.win.side==='good').length;
    return `<div><b>${bdName({board:k})}</b><small>${a.length} 局 · 好人 ${g} 胜 · 狼人 ${f.length-g} 胜 · 平均 ${avgDay(f)} 天</small>${bar2(g,f.length-g)}</div>`;}).join('')}</div>
   <div class="lbl"><strong>玩家</strong>按名字统计已分胜负的对局</div>
-  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return `<div class="pl"><b>${n}<small>${p.n} 局</small></b><div class="pr"><span><b>${pct(p.w,p.n)}</b>总胜率<small>${p.w}/${p.n}</small></span><span class="g"><b>${pct(gw,gn)}</b>神民胜率<small>${gw}/${gn}</small></span><span class="w"><b>${pct(p.ww,p.wolf)}</b>狼人胜率<small>${p.ww}/${p.wolf}</small></span></div></div>`;}).join('')}</div>`:note('录了玩家名字的对局才会统计到人。')}`
+  ${Object.keys(t.P).length?`<div class="st2">${Object.entries(t.P).sort((a,b)=>b[1].n-a[1].n||b[1].w/b[1].n-a[1].w/a[1].n).map(([n,p])=>{const gn=p.n-p.wolf,gw=p.w-p.ww;return `<div class="pl"><b>${n}<small>${p.n} 局</small></b><div class="pr"><span><b>${pct(p.w,p.n)}</b>总胜率<small>${p.w}/${p.n}</small></span><span class="g"><b>${pct(gw,gn)}</b>神民胜率<small>${gw}/${gn}</small></span><span class="w"><b>${pct(p.ww,p.wolf)}</b>狼人胜率<small>${p.ww}/${p.wolf}</small></span></div>${gn?`<div class="pr2 g"><i>神民</i><span><b>${pct(p.sg,p.sv)}</b>警徽票正确率<small>${p.sg}/${p.sv}</small></span><span><b>${pct(p.ew,p.ev)}</b>投狼正确率<small>${p.ew}/${p.ev}</small></span></div>`:''}${p.wolf?`<div class="pr2 w"><i>狼人</i><span><b>${pct(p.kg,p.kn)}</b>屠神率<small>${p.kg}/${p.kn}</small></span><span><b>${pct(p.xg,p.xn)}</b>抗推率<small>${p.xg}/${p.xn}</small></span></div>`:''}</div>`;}).join('')}</div>${note('警徽票正确率：当神民时投的警长票，投给神民阵营的比例。投狼正确率：当神民时投的放逐票，投给狼人的比例（需用“记票”记录）。屠神率：当狼人时，狼刀刀中神职的比例。抗推率：当狼人时，白天放逐出局的是好人的比例。')}`:note('录了玩家名字的对局才会统计到人。')}`
   :note('还没有对局。新开一局时，上一局会存入历史对局并计入统计。')}${note(`统计本机保存的最近 ${HMAX} 局历史对局${S.log.length?'和当前对局':''}，不上传。`)}
   <div class="pkf"><button class="btn" onclick="openHistory()">← 历史对局</button></div>`);}
 
